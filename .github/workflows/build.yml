@@ -3,34 +3,35 @@ name: Build
 on:
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 permissions:
   contents: read
   packages: write
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # Registry büyük harf kabul etmediği için repo adını küçük harfe çeviriyoruz
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          provenance: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      # ublue imajları ~128 katmanlı; Docker'ın overlay2 sınırına (125) takıldığı için podman kullanıyoruz
+      - name: Build image
+        run: |
+          podman build --pull=newer --file Dockerfile \
+            --tag "$IMAGE:latest" \
+            --tag "$IMAGE:$GITHUB_SHA" \
+            .
+
+      - name: Log in to registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push image
+        run: |
+          podman push "$IMAGE:latest"
+          podman push "$IMAGE:$GITHUB_SHA"
