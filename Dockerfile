@@ -6,7 +6,6 @@ RUN --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
     dnf5 -y install \
-      # microcode_ctl \
       fish \
       vim \
       git \
