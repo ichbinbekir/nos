@@ -6,10 +6,17 @@ RUN --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
     dnf5 -y install \
-      microcode_ctl \
+      # microcode_ctl \
       fish \
       vim \
       git \
-    && rm -rf /run/dnf /var/lib/dnf/repos
+      fastfetch \
+      plasma-desktop \
+      sddm \
+      sddm-wayland-plasma \
+      konsole \
+    && rm -rf /run/dnf /var/lib/dnf/repos \
+    && systemctl enable sddm.service \
+    && systemctl set-default graphical.target
 
 RUN bootc container lint
