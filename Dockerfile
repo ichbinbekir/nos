@@ -7,8 +7,6 @@ RUN --mount=type=cache,dst=/var/cache \
     --mount=type=tmpfs,dst=/tmp \
     dnf5 -y install \
       fish \
-      vim \
-      git \
       fastfetch \
       plasma-desktop \
       sddm \
