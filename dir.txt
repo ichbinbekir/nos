@@ -1,0 +1,25 @@
+total 36
+drwxr-xr-x   1 root root 4096 Oct 13 13:16 .
+drwxr-xr-x   1 root root 4096 Oct 13 13:16 ..
+-rwxr-xr-x   1 root root    0 Oct 13 13:16 .dockerenv
+lrwxrwxrwx   2 root root    7 Jan  1  1970 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Oct 12 02:09 boot
+drwxr-xr-x   5 root root  360 Oct 13 13:16 dev
+drwxr-xr-x   1 root root 4096 Oct 13 13:16 etc
+lrwxrwxrwx   2 root root    8 Jan  1  1970 home -> var/home
+lrwxrwxrwx   2 root root    7 Jan  1  1970 lib -> usr/lib
+lrwxrwxrwx   2 root root    9 Jan  1  1970 lib64 -> usr/lib64
+lrwxrwxrwx   2 root root    9 Jan  1  1970 media -> run/media
+lrwxrwxrwx   2 root root    7 Jan  1  1970 mnt -> var/mnt
+lrwxrwxrwx   2 root root    7 Jan  1  1970 opt -> var/opt
+lrwxrwxrwx   3 root root   14 Jan  1  1970 ostree -> sysroot/ostree
+dr-xr-xr-x 241 root root    0 Oct 13 13:16 proc
+lrwxrwxrwx   2 root root   12 Jan  1  1970 root -> var/roothome
+drwxr-xr-x   1 root root 4096 Oct 12 02:09 run
+lrwxrwxrwx   2 root root    8 Jan  1  1970 sbin -> usr/sbin
+lrwxrwxrwx   2 root root    7 Jan  1  1970 srv -> var/srv
+dr-xr-xr-x  12 root root    0 Oct 13 13:16 sys
+drwxr-xr-x   1 root root 4096 Jan  1  1970 sysroot
+drwxrwxrwt   2 root root 4096 Jan  1  1970 tmp
+drwxr-xr-x   1 root root 4096 Oct 12 02:09 usr
+drwxr-xr-x   1 root root 4096 Oct 12 02:09 var
