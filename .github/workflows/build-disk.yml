@@ -1,9 +1,17 @@
 name: Build disk image
 
-# Yayınlanmış imajdan sanal makinede denemek için qcow2 disk imajı üretir.
-# Gerçek bilgisayara kurulum için bkz. CLAUDE.md "Kurulum".
+# Yayınlanmış imajdan sanal makinede denemek için disk imajı üretir.
+# Gerçek bilgisayara kurulum için bkz. README.md "Kurulum".
 on:
   workflow_dispatch:
+    inputs:
+      format:
+        description: "Disk biçimi: vdi (VirtualBox) ya da qcow2 (QEMU/virt-manager)"
+        type: choice
+        options:
+          - vdi
+          - qcow2
+        default: vdi
 
 permissions:
   contents: read
@@ -13,6 +21,8 @@ jobs:
   disk:
     runs-on: ubuntu-26.04
     timeout-minutes: 60
+    env:
+      FORMAT: ${{ inputs.format }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,13 +50,14 @@ jobs:
       - name: Build disk image
         run: |
           sudo "$(which just)" disk-image "$IMAGE"
-          sudo "$(which just)" qcow2
+          sudo "$(which just)" convert "$FORMAT"
           sudo rm -f output/disk.raw
 
+      # qcow2 zaten sıkıştırılmış; vdi sıkıştırılmadığı için indirme boyutu zip ile küçültülür.
       - name: Upload disk image
         uses: actions/upload-artifact@v4
         with:
-          name: nos-qcow2
-          path: output/disk.qcow2
+          name: nos-${{ inputs.format }}
+          path: output/disk.${{ inputs.format }}
           retention-days: 7
-          compression-level: 0
+          compression-level: ${{ inputs.format == 'vdi' && 6 || 0 }}

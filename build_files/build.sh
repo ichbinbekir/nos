@@ -79,6 +79,10 @@ PACKAGES=(
   kdegraphics-thumbnailers
   ark
   spectacle
+  # Spectacle'ın ekran görüntüsündeki yazıyı okuma (OCR) özelliği için dil verisi.
+  # Belirtilmezse pacman 128 dil arasından ilkini (Afrikaanca) seçiyor.
+  tesseract-data-eng
+  tesseract-data-tur
   flatpak
   flatpak-kcm
   discover

@@ -63,6 +63,19 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
    ```
    `Ctrl+Alt+F1` ile giriş ekranına dön.
 
+### Sanal makinede denemek (VirtualBox)
+
+1. GitHub'da **Actions → Build disk image → Run workflow** ile biçim olarak `vdi` seç ve çalıştır.
+2. Bitince çalışmanın sayfasındaki **Artifacts** bölümünden `nos-vdi`'yi indir ve zip'i aç.
+3. VirtualBox'ta yeni bir sanal makine oluştur:
+   - Tür: Linux, sürüm: Arch Linux (64-bit)
+   - Disk: "Var olan bir sanal sabit disk dosyası kullan" → `disk.vdi`
+   - **Sistem → Anakart → "EFI'yi etkinleştir" işaretli olmalı.** Önyükleyici sadece EFI ile çalışıyor; işaretli değilse sistem açılmaz.
+   - En az 4 GB RAM, 2 işlemci. Ekran → Grafik denetleyicisi: VMSVGA.
+4. Aç. İlk açılış adımları yukarıdaki 4. ve 5. adımlarla aynı.
+
+Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girmez; ekran VirtualBox'ın kendi grafik sürücüsüyle çalışır, masaüstü biraz yavaş olabilir. Disk 20 GB.
+
 ## Kullanım
 
 | İş | Komut |

@@ -60,6 +60,12 @@ disk-image image=(image_name + ":" + tag) $filesystem=filesystem:
         --via-loopback /data/disk.raw \
         --wipe
 
-# Ham disk imajını sıkıştırılmış qcow2'ye çevirir
-qcow2:
-    qemu-img convert -c -p -f raw -O qcow2 output/disk.raw output/disk.qcow2
+# Ham disk imajını sanal makine biçimine çevirir: qcow2 (QEMU/virt-manager) ya da vdi (VirtualBox)
+convert format="vdi":
+    #!/usr/bin/env bash
+    set -xeuo pipefail
+    case "{{ format }}" in
+      qcow2) qemu-img convert -c -p -f raw -O qcow2 output/disk.raw output/disk.qcow2 ;;
+      vdi) qemu-img convert -p -f raw -O vdi output/disk.raw output/disk.vdi ;;
+      *) echo "Bilinmeyen biçim: {{ format }}" >&2; exit 1 ;;
+    esac
