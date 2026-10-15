@@ -127,3 +127,7 @@ ufw default allow outgoing
 ufw allow 1714:1764/tcp comment 'KDE Connect'
 ufw allow 1714:1764/udp comment 'KDE Connect'
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
+
+# NoExtract kaldırılıp paketler yeniden kurulunca pacman, Docker imajının kendi
+# ayarlarını korumak için yeni sürümleri .pacnew olarak bırakıyor; gerekmiyorlar.
+find /etc -name '*.pacnew' -delete

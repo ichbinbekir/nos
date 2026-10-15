@@ -37,7 +37,7 @@ Yapı iki kaynaktan birleştirildi:
 - `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. `bootc-rootfs.sh` ve `build-bootc.sh` değiştirildi; değişiklikler dosyaların başında yazıyor.
 - `system_files/`: İmaja olduğu gibi kopyalanan dosyalar (SDDM Wayland ayarı, sudoers, resolv.conf tmpfiles).
 - `Justfile`: `build`, `rechunk` (chunkah), `disk-image`, `qcow2`.
-- `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC ve elle tetikleme. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa).
+- `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC ve elle tetikleme. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa; anahtar şifreli olduğu için şifresi `COSIGN_PASSWORD` secret'ında).
 - `.github/workflows/build-disk.yml`: Elle tetikleniyor. Yayınlanmış imajdan sanal makine için qcow2 üretiyor.
 - `LICENSE`: Proje MIT. İstisnalar Apache-2.0: `build_files/bootc/` (kendi `LICENSE` dosyası korunmalı) ve Justfile'daki `rechunk` tarifi. Başka projelerden kod alınırsa kaynağı ve lisansı belirtilir, `LICENSE`'taki istisnalar listesine eklenir.
 - `cosign.pub`: İmza doğrulama anahtarı. `cosign.key` `.gitignore`'da, asla commit'lenmemeli.
@@ -70,7 +70,8 @@ Yapı iki kaynaktan birleştirildi:
 - **Dizüstü mü masaüstü mü bilinmiyor.** Intel tümleşik grafik + NVIDIA'lı bir dizüstüyse (hibrit grafik) ek ayar gerekebilir.
 - **Snapper (planlandı, sahibi kesin istiyor):** btrfs üzerinde `/var/home` için otomatik anlık görüntü. Henüz eklenmedi.
 - **Windows ile çift önyükleme (dual boot) isteniyor.** README'deki kurulum `--wipe` ile bütün diski siliyor; çift önyükleme için `bootc install to-filesystem` ile hazır bir bölüme kurulum yolu yazılmalı. Windows'un EFI bölümü genelde 100 MB ve systemd-boot çekirdek + initramfs'i (NVIDIA ile büyük) oraya koyuyor; yer yetmeyebilir. Sahibinin ayrı bir diski olup olmadığı soruldu.
-- İlk build (`578f4b4`) bootc derlenirken libselinux eksikliğinden düştü; düzeltildi, sonraki build bekleniyor.
+- **Build süresi:** bootc her build'de kaynaktan derleniyor (10–20 dk). Planlanan iyileştirme: bootc'yi ayrı, küçük bir imaj olarak (ör. `nos-bootc`) sadece yeni bootc sürümünde ve haftada bir derleyip ana build'de `COPY --from` ile kullanmak. Arch kütüphaneleri değişip bootc bozulursa `bootc container lint` adımı bunu yakalar.
+- **İlk başarılı build (`0cb41f8`):** İmaj oluştu ve yüklendi; imza adımı `COSIGN_PASSWORD` eksik olduğu için düştü (düzeltildi). Günlükte zararsız uyarılar: lint `runtime-deps: chcon` (SELinux yok, sorun değil), `archlinux-keyring` yeniden kurulurken "no secret key" (Docker imajında pacman-key gizli anahtarı yok; paket imza doğrulaması çalışıyor), `.pacnew` dosyaları (`build.sh` sonunda siliniyor). Sağlayıcı (provider) seçimleri kontrol edilemedi; verilen günlük eksikti.
 - pacman `--noconfirm` ile sanal paketlerde (ör. `phonon-qt6-backend`) varsayılan sağlayıcıyı seçiyor. İlk build günlüğünden kontrol edilmeli; istenmeyen ya da ağır bir seçim varsa doğru sağlayıcı listeye yazılmalı (`noto-fonts`, `noto-fonts-emoji`, `pipewire-jack` bu yüzden listede).
 - Kurulum ISO'su yok: image-template'in ISO'su Fedora'nın Anaconda'sını kullanıyor. Kurulum canlı USB'den `bootc install to-disk` ile.
 - İmzalar CI'da atılıyor ama sistem güncellerken doğrulanmıyor (`/etc/containers/policy.json` ayarlanmadı).

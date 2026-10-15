@@ -69,7 +69,8 @@ jobs:
           done
           echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
 
-      # İmza, SIGNING_SECRET tanımlıysa atılır (bkz. CLAUDE.md)
+      # İmza, SIGNING_SECRET tanımlıysa atılır. Anahtar şifreliyse şifresi
+      # COSIGN_PASSWORD secret'ında durur (bkz. README).
       - name: Install cosign
         if: github.event_name != 'pull_request' && env.SIGNING_SECRET != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -81,4 +82,5 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$IMAGE_NAME@$DIGEST"
