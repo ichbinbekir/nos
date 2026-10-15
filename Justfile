@@ -1,6 +1,6 @@
 image_name := env("IMAGE_NAME", "nos")
 tag := env("IMAGE_TAG", "latest")
-filesystem := env("BUILD_FILESYSTEM", "ext4")
+filesystem := env("BUILD_FILESYSTEM", "btrfs")
 
 [private]
 default:

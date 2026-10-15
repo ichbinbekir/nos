@@ -53,7 +53,7 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
      -v /var/lib/containers:/var/lib/containers -v /dev:/dev \
      ghcr.io/ichbinbekir/nos:latest \
      bootc install to-disk --composefs-backend --bootloader systemd \
-       --filesystem ext4 --wipe /dev/nvme0n1
+       --filesystem btrfs --wipe /dev/nvme0n1
    ```
 4. Yeniden başlat. İlk açılışta dil, klavye düzeni, saat dilimi ve root şifresi sorulur.
 5. Giriş ekranında henüz kullanıcı yok. `Ctrl+Alt+F2` ile metin ekranına geç, `root` ile giriş yap ve kullanıcını oluştur:

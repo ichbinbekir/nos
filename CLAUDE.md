@@ -34,7 +34,7 @@ Yapı iki kaynaktan birleştirildi:
 - `Containerfile`: Build aşamaları.
 - `build_files/build.sh`: Paket listesi, servisler ve ayarlar. Değişikliklerin çoğu burada yapılır.
 - `build_files/aur.sh`: AUR paketlerinin listesi (`AUR_PACKAGES`) ve derlenmesi.
-- `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. Sadece `bootc-rootfs.sh` değiştirildi; değişiklik dosyanın başında yazıyor.
+- `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. `bootc-rootfs.sh` ve `build-bootc.sh` değiştirildi; değişiklikler dosyaların başında yazıyor.
 - `system_files/`: İmaja olduğu gibi kopyalanan dosyalar (SDDM Wayland ayarı, sudoers, resolv.conf tmpfiles).
 - `Justfile`: `build`, `rechunk` (chunkah), `disk-image`, `qcow2`.
 - `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC ve elle tetikleme. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa).
@@ -45,7 +45,7 @@ Yapı iki kaynaktan birleştirildi:
 ### Build aşamaları
 
 1. `ctx`: `build_files` ve `system_files`. Sadece bind mount ile kullanılır, imaja girmez.
-2. `bootc-builder`: bootc'yi `main` dalından derler.
+2. `bootc-builder`: bootc'nin en son yayınlanmış sürümünü (`vX.Y.Z` etiketi) SELinux desteği olmadan derler. bootc 1.17'den beri varsayılan olarak libselinux istiyor; Arch'ın resmi depolarında yok. Bu yüzden `CARGO_OPTIONS='--no-default-features --features "install-to-disk pre-6.15"'` kullanılıyor. bootc'ye yeni bir varsayılan özellik eklenirse bu listeye eklenmesi gerekebilir (her crate'in `[features] default`'una bak).
 3. `aur-builder`: AUR paketlerini `build` kullanıcısıyla `makepkg` ile derler.
 4. `system`: Arch imajı + bootc → pacman yolları `/usr/lib/sysimage`'a taşınır → `build.sh` → `initramfs.sh` → `bootc-rootfs.sh` → `bootc container lint`.
 
@@ -59,7 +59,7 @@ Yapı iki kaynaktan birleştirildi:
 - **SDDM Wayland:** `system_files/usr/lib/sddm/sddm.conf.d/10-wayland.conf` giriş ekranını KWin üzerinde Wayland ile çalıştırıyor. sddm paketi Xorg'a bağımlı olduğu için Xorg kuruluyor ama kullanılmıyor.
 - **Ağ:** NetworkManager + systemd-resolved (`/etc/resolv.conf` tmpfiles ile yönlendiriliyor). bootcrew'daki `systemd-networkd` kullanılmıyor. `openssh` kurulu ama `sshd` açılmıyor (sadece istemci).
 - **İlk açılış:** `/etc/machine-id` `uninitialized` olduğu için systemd-firstboot dil, klavye, saat dilimi ve root şifresini soruyor. Kullanıcı elle oluşturuluyor (README'de anlatılıyor). `wheel` grubu sudo kullanabiliyor.
-- **Dosya sistemi:** Kurulum ext4 ile yapılıyor. bootcrew'daki gibi `btrfs-progs` ve `xfsprogs` de kurulu; dosya sistemi değiştirilebilir.
+- **Dosya sistemi:** btrfs (sahibinin tercihi). İmajın içinde değil, kurulumda `bootc install to-disk --filesystem btrfs` ile seçiliyor (README ve Justfile'daki `filesystem`). btrfs desteğinin initramfs'e girmesi için `btrfs-progs` paketinin `initramfs.sh`'den önce kurulu olması gerekiyor; listeden çıkarılmamalı. bootc btrfs'i alt birimler (subvolume) ve anlık görüntü (snapshot) ayarı olmadan, tek bir dosya sistemi olarak kuruyor; sistem için geri alma zaten bootc'de var.
 - **bootc lint:** `build.sh` `/run` ve `/tmp` tmpfs'iyle çalışıyor; `/var` ise `bootc-rootfs.sh` tarafından boşaltılıyor.
 - Betikler Containerfile'da `bash /ctx/...` ile çalıştırılıyor (Windows'ta yazılan dosyaların çalıştırma izni yok). `.gitattributes` her şeyi LF tutuyor; CRLF betikleri bozar.
 - Betik yorumları Türkçe, commit mesajları İngilizce ve conventional commit biçiminde.
@@ -68,7 +68,9 @@ Yapı iki kaynaktan birleştirildi:
 
 - **Hiç build edilmedi.** İlk CI çalışmasında hata çıkması olası: AUR adımı, NoExtract sonrası yeniden kurulum, ufw'nin build sırasında kural yazması, `bootc container lint`.
 - **Dizüstü mü masaüstü mü bilinmiyor.** Intel tümleşik grafik + NVIDIA'lı bir dizüstüyse (hibrit grafik) ek ayar gerekebilir.
-- bootc `main` dalından derleniyor; `main` bozuksa build de bozulur. Gerekirse bir sürüm etiketine sabitlenebilir.
+- **Snapper (planlandı, sahibi kesin istiyor):** btrfs üzerinde `/var/home` için otomatik anlık görüntü. Henüz eklenmedi.
+- **Windows ile çift önyükleme (dual boot) isteniyor.** README'deki kurulum `--wipe` ile bütün diski siliyor; çift önyükleme için `bootc install to-filesystem` ile hazır bir bölüme kurulum yolu yazılmalı. Windows'un EFI bölümü genelde 100 MB ve systemd-boot çekirdek + initramfs'i (NVIDIA ile büyük) oraya koyuyor; yer yetmeyebilir. Sahibinin ayrı bir diski olup olmadığı soruldu.
+- İlk build (`578f4b4`) bootc derlenirken libselinux eksikliğinden düştü; düzeltildi, sonraki build bekleniyor.
 - pacman `--noconfirm` ile sanal paketlerde (ör. `phonon-qt6-backend`) varsayılan sağlayıcıyı seçiyor. İlk build günlüğünden kontrol edilmeli; istenmeyen ya da ağır bir seçim varsa doğru sağlayıcı listeye yazılmalı (`noto-fonts`, `noto-fonts-emoji`, `pipewire-jack` bu yüzden listede).
 - Kurulum ISO'su yok: image-template'in ISO'su Fedora'nın Anaconda'sını kullanıyor. Kurulum canlı USB'den `bootc install to-disk` ile.
 - İmzalar CI'da atılıyor ama sistem güncellerken doğrulanmıyor (`/etc/containers/policy.json` ayarlanmadı).
