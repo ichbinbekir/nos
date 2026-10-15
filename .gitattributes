@@ -1,0 +1,3 @@
+# İmaja giren betik ve yapılandırma dosyaları Linux'ta çalışıyor; Windows'ta
+# checkout edilse bile satır sonları LF kalmalı.
+* text=auto eol=lf

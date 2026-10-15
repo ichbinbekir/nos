@@ -1,71 +1,75 @@
 # nos
 
-`ghcr.io/ublue-os/base-nvidia:latest` (Fedora 44, NVIDIA sürücüleri dahil) üzerine KDE Plasma ekleyen kişisel bir bootc imajı. Hedef: gereksiz paket ve servis içermeyen, sade bir Plasma masaüstü.
+Arch Linux tabanlı, KDE Plasma'lı kişisel bir bootc imajı. Kullanıcıya yönelik açıklama, kurulum ve kullanım: [README.md](README.md).
 
-## Dosyalar
+## Çalışma şekli (önemli)
 
-- `Dockerfile`: İmajın tamamı. Tek bir `dnf5 install` katmanı ve `bootc container lint` var.
-- `.github/workflows/build.yml`: Sadece elle tetikleniyor (`workflow_dispatch`). Podman ile build alıp `ghcr.io/<repo>:latest` ve `:<sha>` etiketleriyle push ediyor.
-- `dir.txt`: Temel imajın kök dizin yapısı (`ls -la /`). Sadece referans için.
+- **Proje sahibi yapıyı Claude'a bırakmıştır.** Justfile, workflow'lar, build aşamaları gibi teknik yapıyı bilmiyor ve bunlarla uğraşmak istemiyor. Ne istediğini söyler (ör. "şu uygulama olsun", "şunu kaldır"); Claude bunu aşağıdaki kurallar çerçevesinde uygun yere ekler, gerekirse yapıyı düzenler.
+- Kararları Claude verir ve kısaca, teknik olmayan bir dille açıklar. Sadece gerçekten sahibine ait kararlar için soru sorar (ör. donanımı hakkında bilinmeyen bir bilgi, bir uygulamayı isteyip istemediği).
+- İstek kurallarla çelişiyorsa (ör. ağır bir paket, donanıma uymayan bir şey) bunu söyleyip daha hafif bir alternatif önerir.
+- README.md'yi güncel tut: Başka kullanıcıların bilmesi gerekenler (amaç, donanım, kurulum, kullanım) orada. CLAUDE.md'ye sadece projede çalışan AI'ın bilmesi gerekenler yazılır.
+- Bütün imajı yerelde build edip test etme; doğrulama GitHub Actions'ta yapılıyor. Paket adı gibi küçük kontroller web API'leriyle yapılabilir.
 
-## Kurallar
+## Temel kurallar
 
-- **Temel imajdaki paketler:** Hepsini listeye yazma, ama doğrudan kullandığımız birini (bir servisini açtığımız ya da bir özelliği için ona dayandığımız) listeye yaz. Temel imajdan çıkarılırsa da kurulur.
-- **İstediğimiz her paketi listeye açıkça yaz**, başka bir paketin bağımlılığı ya da önerisi (Recommends) olarak zaten gelse bile. Amaç, neyin bilinçli olarak kurulduğunu listeden görebilmek ve Fedora bağımlılıkları değiştirse de imajın bozulmaması. Bu yüzden "başka paketle zaten geliyor mu" diye kontrol etmeye gerek yok.
-- **İhtiyaç duyduğumuz her servisi `systemctl enable` ile açıkça aç**, temel imajda ya da preset ile zaten açık gelse bile. Varsayılan hedef (`graphical.target`) için de aynısı geçerli.
-- İstenmeyen bir öneri paketi gelirse `--exclude` ile açıkça hariç tut (bkz. Discover).
-- Plasma'da bir özellik "yok" gibi görünüyorsa, genelde eksik olan servis değil, KDE'deki ayar sayfası ya da widget'tır. Örneğin Wi-Fi zaten çalışıyordu, eksik olan `plasma-nm` arayüzüydü.
-- Temel imajda bir paketin ya da servisin olup olmadığını öğrenmek gerekirse imajın içinde sor: `docker run --rm ghcr.io/ublue-os/base-nvidia:latest rpm -q <paket>` ya da `... systemctl is-enabled <servis>`.
-- **Build:** ublue imajları yaklaşık 128 katmanlı. Docker'ın overlay2 sınırı 125 olduğu için `docker build` başarısız olur; podman kullan. Yerelde `docker run` ile paket kontrolü yapmak ise sorunsuz çalışıyor.
-- Dockerfile yorumları Türkçe, commit mesajları İngilizce ve conventional commit biçiminde (`chore:`, `fix:`, `dev:`).
+**En temel amaç: sahibinin önüne açınca çalışan, rahat kullanılan, hafif bir makine getirmek.** Aşağıdaki kurallar bu amaca hizmet eder; çeliştiklerinde "çalışır ve rahat" önce gelir.
 
-## Paketler ve neden eklendiler
+1. **Hafif ama aşırı sıkı değil.** Masaüstü ve uygulamalar sadece kullanılanlardan oluşur; bir uygulama eklemeden önce Flatpak ya da Distrobox ile daha hafif bir yolu var mı düşünülür. Ama Linux'ta normalde bulunan, arada bir gerekebilecek genel araçlar (git, openssh, bluez-utils, man sayfaları, dosya sistemi araçları) kesilmez.
+2. **Sahibinin donanımı: Intel işlemci, NVIDIA ekran kartı.** Açıkça başka bir donanıma özel olan paketler (adında `amd`, `radeon` vb. geçen; ör. `amd-ucode`) eklenmez. Ama eksik çıkmasın diye `linux-firmware` bütün olarak kurulur; firmware'i üreticilere bölmeye uğraşılmaz.
+3. **Tek tarayıcı Helium** (AUR, imajın içinde). Başka tarayıcı eklenmez.
+4. **Güvenlik duvarı ufw.** firewalld kullanılmıyor; sahibi için ufw daha anlaşılır.
 
-| Paket | Neden |
-|---|---|
-| `bluez`, `NetworkManager-wifi`, `firewalld`, `flatpak`, `distrobox`, `python3` | Temel imajda zaten var. Doğrudan kullandığımız için listede. |
-| `fish`, `fastfetch` | Kişisel tercih |
-| `plasma-desktop`, `konsole`, `dolphin` | Temel masaüstü |
-| `sddm`, `sddm-wayland-plasma` | Giriş ekranı. `sddm-wayland-plasma`, giriş ekranının KWin üzerinde Wayland ile çalışmasını seçiyor; liste dışında bırakılırsa dnf Weston'lu alternatifi seçebilir. Başka paketler ikisini de zaten çekiyor, ama bu seçim açıkça belirtilsin diye listede. |
-| `bluedevil` | Bluetooth arayüzü. bluez servisi temel imajda var. |
-| `plasma-nm` | Wi-Fi ve ağ arayüzü. NetworkManager temel imajda var. |
-| `kwalletmanager5` | Sistem Ayarları'ndaki KDE Cüzdanı sayfası (cüzdanı kapatmak için). Adında 5 olsa da Plasma 6 sürümü. `kwalletmanager` adlı paket eski KDE4 sürümü, onu kurma. |
-| `kscreen` | Ekran ayarları (çözünürlük, Hz, ölçekleme, çoklu monitör) |
-| `sddm-kcm` | Giriş ekranı ayar sayfası |
-| `kde-gtk-config`, `breeze-gtk` | GTK uygulamalarının Breeze temasıyla görünmesi |
-| `kdegraphics-thumbnailers`, `ffmpegthumbs` | Dolphin'de PDF, resim ve video önizlemeleri |
-| `ark`, `spectacle` | Arşiv yönetimi, ekran görüntüsü |
-| `flatpak-kcm` | Flatpak izinlerini Sistem Ayarları'ndan yönetme |
-| `plasma-discover`, `plasma-discover-flatpak` | Flatpak uygulama mağazası. `plasma-discover-packagekit` ve `plasma-discover-offline-updates` `--exclude` ile hariç tutuluyor: sistem bootc ile güncellendiği için Discover'ın RPM güncellemeleri çalışmaz. |
-| `tuned`, `tuned-ppd` | Pil menüsündeki güç profilleri. powerdevil bunu zaten öneriyor; açıkça listede. `power-profiles-daemon` ile çakışır, onu ekleme. |
-| `kwrite`, `gwenview` | Metin editörü, resim görüntüleyici |
-| `kde-connect` | Telefon entegrasyonu. Fedora'daki paket adı `kdeconnect` değil, `kde-connect`. |
-| `plasma-systemmonitor`, `kinfocenter`, `plasma-disks` | Görev yöneticisi, sistem bilgisi, disk sağlık uyarıları |
+Paketleri ve servisleri "zaten geliyor olsa bile açıkça yaz" kuralı kaldırıldı (2026-10-15). Bağımlılık olarak zaten gelen bir şeyi listeye yazmak gerekmiyor; listede şu an duranlar ise kalabilir.
 
-## Servis ve güvenlik duvarı ayarları
+## Yapı
 
-- Açıkça açılan servisler: `sddm`, `NetworkManager`, `bluetooth`, `firewalld`, `tuned`, `tuned-ppd`. Varsayılan hedef: `graphical.target`. Bunların çoğu zaten açık geliyor; kurala göre yine de yazılıyor.
-- `sshd` kapatıldı (`systemctl disable sshd.service`), çünkü SSH ile bağlanılmayacak. `sshd.socket` zaten kapalı geliyor.
-- firewalld'ın varsayılan bölgesi `public`. Temel imajda bu bölgede `dhcpv6-client mdns ssh` servisleri açık geliyor. `ssh` kaldırıldı, `kdeconnect` (1714–1764 TCP/UDP) eklendi. `kde-connect` paketi servis tanımını getiriyor ama portları kendisi açmıyor.
-- `firewall-offline-cmd` ile ilgili üç not:
-  - `--remove-service` eski bir seçenek ve başka seçeneklerle birlikte kullanılamıyor. Yerine `--remove-service-from-zone` kullan.
-  - Ekleme ve çıkarma aynı komutta yapılamıyor; ayrı komutlar gerekiyor.
-  - Komut, bölge dosyasının yedeğini `.old` uzantısıyla bırakıyor; bunu sil.
+Yapı iki kaynaktan birleştirildi:
+- **bootcrew/mono** (`arch/`, `shared/`): Arch'ı bootc ile açılabilir yapan kısım. bootc kaynaktan derleniyor, pacman yolları `/usr/lib/sysimage`'a taşınıyor, initramfs dracut ile üretiliyor, bootc dizin düzeni kuruluyor.
+- **ublue-os/image-template**: Repo düzeni (`build_files/`, `system_files/`, Justfile) ve CI.
 
-## bootc lint uyarıları
+Önceki Fedora (ublue `base-nvidia`) sürümü git geçmişinde: `d0ae1b9`.
 
-`bootc container lint` iki uyarı veriyordu; ikisi de çözüldü:
-- `nonempty-run-tmp`: Paket kurulumu sırasında `/run/sddm` ve `/run/tuned` oluşuyor. `/run` sadece çalışma zamanına ait olduğu için bunlar imajda kalmamalı; `rm -rf` ile siliniyor. Yeni bir paket `/run` altında dizin bırakırsa onu da bu satıra ekle.
-- `var-tmpfiles`: `/var` altındaki her içerik için bir tmpfiles.d girdisi olmalı. tuned paketi `/var/lib/tuned`'ı oluşturuyor ama girdisini getirmiyor. Girdi `/usr/lib/tmpfiles.d/nos-tuned.conf` dosyasına yazılıyor.
+### Dosyalar
 
-## Bilinçli olarak eklenmeyenler
+- `Containerfile`: Build aşamaları.
+- `build_files/build.sh`: Paket listesi, servisler ve ayarlar. Değişikliklerin çoğu burada yapılır.
+- `build_files/aur.sh`: AUR paketlerinin listesi (`AUR_PACKAGES`) ve derlenmesi.
+- `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. Sadece `bootc-rootfs.sh` değiştirildi; değişiklik dosyanın başında yazıyor.
+- `system_files/`: İmaja olduğu gibi kopyalanan dosyalar (SDDM Wayland ayarı, sudoers, resolv.conf tmpfiles).
+- `Justfile`: `build`, `rechunk` (chunkah), `disk-image`, `qcow2`.
+- `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC ve elle tetikleme. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa).
+- `.github/workflows/build-disk.yml`: Elle tetikleniyor. Yayınlanmış imajdan sanal makine için qcow2 üretiyor.
+- `LICENSE`: Proje MIT. İstisnalar Apache-2.0: `build_files/bootc/` (kendi `LICENSE` dosyası korunmalı) ve Justfile'daki `rechunk` tarifi. Başka projelerden kod alınırsa kaynağı ve lisansı belirtilir, `LICENSE`'taki istisnalar listesine eklenir.
+- `cosign.pub`: İmza doğrulama anahtarı. `cosign.key` `.gitignore`'da, asla commit'lenmemeli.
 
-- `power-profiles-daemon`: `tuned-ppd` ile çakışır.
-- `kdeplasma-addons`: Sadece Color Picker widget'ı istenmişti. Fedora'da bu widget ayrı bir paket olarak yok; bütün koleksiyonu kurmaya gerek görülmedi.
-- Tarayıcı: Helium, Distrobox içinde (AUR veya `.deb` ile) kullanılacak. Flathub'da ve Fedora depolarında yok.
-- Flathub: Elle eklemeye gerek yok. `flatpak-add-fedora-repos` servisi (ublue tarafından değiştirilmiş) ilk açılışta Flathub'ı açık olarak, Fedora'nın Flatpak depolarını ise kapalı olarak ekliyor.
-- podman, ffmpeg, GStreamer codec'leri, emoji fontları ve CUPS temel imajda zaten var.
+### Build aşamaları
+
+1. `ctx`: `build_files` ve `system_files`. Sadece bind mount ile kullanılır, imaja girmez.
+2. `bootc-builder`: bootc'yi `main` dalından derler.
+3. `aur-builder`: AUR paketlerini `build` kullanıcısıyla `makepkg` ile derler.
+4. `system`: Arch imajı + bootc → pacman yolları `/usr/lib/sysimage`'a taşınır → `build.sh` → `initramfs.sh` → `bootc-rootfs.sh` → `bootc container lint`.
+
+## Teknik notlar
+
+- Paket adlarını Arch'ta doğrula: `https://archlinux.org/packages/search/json/?name=<paket>`. Fedora adları farklı olabiliyor (ör. `kde-connect` → `kdeconnect`, `kwrite` → `kate` paketinin içinde).
+- **AUR paketi eklemek:** `aur.sh`'deki `AUR_PACKAGES` listesine ekle. PGP anahtarları `.SRCINFO`'daki `validpgpkeys`'ten otomatik alınıyor.
+- **`/opt` imajın içinde gerçek bir dizin.** bootcrew onu `/var/opt`'a yönlendiriyordu; AUR paketleri (Helium) `/opt`'a kurulduğu için değiştirildi.
+- **NoExtract:** Resmi Arch Docker imajı man sayfalarını, belgeleri ve çevirileri kurmuyor (`pacman.conf` sonundaki `NoExtract` satırları). `build.sh` bu satırların hepsini siler ve önceden kurulu paketleri yeniden kurar; sonuç normal bir Arch kurulumu gibi olur. Bunu kaldırma, yoksa Türkçe arayüz, klavye ve man sayfaları çalışmaz.
+- **ufw:** Build sırasında ufw çalışmıyor; `ufw allow`/`ufw default` kuralları sadece `/etc/ufw` altındaki dosyalara yazıyor. `/etc/ufw/ufw.conf`'ta `ENABLED=yes` ve `ufw.service` açık olunca açılışta uygulanıyor. Gelen bağlantılar kapalı, sadece KDE Connect (1714–1764 TCP/UDP) açık.
+- **SDDM Wayland:** `system_files/usr/lib/sddm/sddm.conf.d/10-wayland.conf` giriş ekranını KWin üzerinde Wayland ile çalıştırıyor. sddm paketi Xorg'a bağımlı olduğu için Xorg kuruluyor ama kullanılmıyor.
+- **Ağ:** NetworkManager + systemd-resolved (`/etc/resolv.conf` tmpfiles ile yönlendiriliyor). bootcrew'daki `systemd-networkd` kullanılmıyor. `openssh` kurulu ama `sshd` açılmıyor (sadece istemci).
+- **İlk açılış:** `/etc/machine-id` `uninitialized` olduğu için systemd-firstboot dil, klavye, saat dilimi ve root şifresini soruyor. Kullanıcı elle oluşturuluyor (README'de anlatılıyor). `wheel` grubu sudo kullanabiliyor.
+- **Dosya sistemi:** Kurulum ext4 ile yapılıyor. bootcrew'daki gibi `btrfs-progs` ve `xfsprogs` de kurulu; dosya sistemi değiştirilebilir.
+- **bootc lint:** `build.sh` `/run` ve `/tmp` tmpfs'iyle çalışıyor; `/var` ise `bootc-rootfs.sh` tarafından boşaltılıyor.
+- Betikler Containerfile'da `bash /ctx/...` ile çalıştırılıyor (Windows'ta yazılan dosyaların çalıştırma izni yok). `.gitattributes` her şeyi LF tutuyor; CRLF betikleri bozar.
+- Betik yorumları Türkçe, commit mesajları İngilizce ve conventional commit biçiminde.
 
 ## Açık konular
 
-- Güvenlik duvarı kuralı bir container içinde doğrulandı, ama KDE Connect'in telefonla gerçekten eşleşip eşleşmediği kurulu bir sistemde test edilmedi.
+- **Hiç build edilmedi.** İlk CI çalışmasında hata çıkması olası: AUR adımı, NoExtract sonrası yeniden kurulum, ufw'nin build sırasında kural yazması, `bootc container lint`.
+- **Dizüstü mü masaüstü mü bilinmiyor.** Intel tümleşik grafik + NVIDIA'lı bir dizüstüyse (hibrit grafik) ek ayar gerekebilir.
+- bootc `main` dalından derleniyor; `main` bozuksa build de bozulur. Gerekirse bir sürüm etiketine sabitlenebilir.
+- pacman `--noconfirm` ile sanal paketlerde (ör. `phonon-qt6-backend`) varsayılan sağlayıcıyı seçiyor. İlk build günlüğünden kontrol edilmeli; istenmeyen ya da ağır bir seçim varsa doğru sağlayıcı listeye yazılmalı (`noto-fonts`, `noto-fonts-emoji`, `pipewire-jack` bu yüzden listede).
+- Kurulum ISO'su yok: image-template'in ISO'su Fedora'nın Anaconda'sını kullanıyor. Kurulum canlı USB'den `bootc install to-disk` ile.
+- İmzalar CI'da atılıyor ama sistem güncellerken doğrulanmıyor (`/etc/containers/policy.json` ayarlanmadı).
+- KDE Connect, NVIDIA + Wayland ve ufw kuralları gerçek donanımda denenmedi.

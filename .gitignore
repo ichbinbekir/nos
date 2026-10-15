@@ -1,0 +1,4 @@
+# cosign özel anahtarı asla commit'lenmemeli
+cosign.key
+output/
+*_chunkah_*/

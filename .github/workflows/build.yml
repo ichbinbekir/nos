@@ -1,40 +1,84 @@
 name: Build
 
 on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - master
+  # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
+  schedule:
+    - cron: '0 4 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: nos
+
 jobs:
   build:
     runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
-      # Registry büyük harf kabul etmediği için repo adını küçük harfe çeviriyoruz
-      - name: Set image name
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
-      # ublue imajları ~128 katmanlı; Docker'ın overlay2 sınırına (125) takıldığı için podman kullanıyoruz
+      # Registry büyük harf kabul etmediği için kullanıcı adı küçük harfe çevrilir
+      - name: Set registry
+        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
       - name: Build image
-        run: |
-          podman build --pull=newer --file Dockerfile \
-            --tag "$IMAGE:latest" \
-            --tag "$IMAGE:$GITHUB_SHA" \
-            .
+        run: just build
+
+      - name: Rechunk image
+        run: just rechunk
 
       - name: Log in to registry
+        if: github.event_name != 'pull_request'
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: |
+          echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          # cosign Docker'ın oturum bilgisini kullanıyor
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push image
+        if: github.event_name != 'pull_request'
         run: |
-          podman push "$IMAGE:latest"
-          podman push "$IMAGE:$GITHUB_SHA"
+          set -euxo pipefail
+          for tag in latest "$(date -u +%Y%m%d)" "${GITHUB_SHA::7}"; do
+            podman push --digestfile=/tmp/digestfile "$IMAGE_NAME:latest" "$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
+          done
+          echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
+
+      # İmza, SIGNING_SECRET tanımlıysa atılır (bkz. CLAUDE.md)
+      - name: Install cosign
+        if: github.event_name != 'pull_request' && env.SIGNING_SECRET != ''
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: 'v3.1.2'
+
+      - name: Sign image
+        if: github.event_name != 'pull_request' && env.SIGNING_SECRET != ''
+        env:
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+        run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$IMAGE_NAME@$DIGEST"
