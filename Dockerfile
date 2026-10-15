@@ -12,8 +12,29 @@ RUN --mount=type=cache,dst=/var/cache \
       sddm \
       sddm-wayland-plasma \
       konsole \
+      dolphin \
+      bluedevil \
+      plasma-nm \
+      kwalletmanager5 \
+      kscreen \
+      sddm-kcm \
+      kde-gtk-config \
+      breeze-gtk \
+      kdegraphics-thumbnailers \
+      ark \
+      spectacle \
+      flatpak-kcm \
+      kwrite \
+      gwenview \
+      kde-connect \
+      plasma-systemmonitor \
+      kinfocenter \
+      plasma-disks \
     && rm -rf /run/dnf /var/lib/dnf/repos \
     && systemctl enable sddm.service \
-    && systemctl set-default graphical.target
+    && systemctl disable sshd.service \
+    && firewall-offline-cmd --remove-service-from-zone=ssh \
+    && firewall-offline-cmd --add-service=kdeconnect \
+    && rm -f /etc/firewalld/zones/*.old
 
 RUN bootc container lint
