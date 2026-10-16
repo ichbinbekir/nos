@@ -82,11 +82,14 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 | Güncelle (yeniden başlatınca uygulanır) | `sudo bootc upgrade` |
 | Önceki sürüme dön | `sudo bootc rollback` |
 | Hangi sürümdeyim | `sudo bootc status` |
+| Güncelleme var mı (indirmeden) | `sudo bootc upgrade --check` |
 | Otomatik güncellemeyi bu oturumda durdur | `sudo systemctl stop nos-update.timer` |
 | Süren güncelleme indirmesini kes | `sudo systemctl stop nos-update.service` |
 | Otomatik güncellemeyi kalıcı kapat / aç | `sudo systemctl disable --now nos-update.timer` / `enable --now` |
 
 İmaj her gün otomatik olarak yeniden build ediliyor; Arch paketlerindeki güncellemeler bu yolla geliyor. Sistem de güncellemeleri kendisi kontrol ediyor (açılıştan 10 dakika sonra, sonra her 6 saatte bir): yeni sürümü arka planda indirip hazırlıyor, bilgisayarı yeniden başlatmıyor. Hazırlanan sürüm bir sonraki açılışta devreye giriyor. Elle `sudo bootc upgrade` yapmak gerekmiyor; hemen kontrol etmek istersen kullanabilirsin.
+
+Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini ilk kurulum ekranı ayarlıyor. `bootc switch` ile gelen sistemlerde menü görünmüyorsa: `sudo sed -i 's/^#\?timeout.*/timeout 5/' /boot/loader/loader.conf` (EFI bölümü salt okunursa önce `sudo mount -o remount,rw /boot`).
 
 İmajda SSH sunucusu açık değil; `ssh` sadece başka makinelere bağlanmak için var.
 

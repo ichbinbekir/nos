@@ -185,6 +185,25 @@ apply_keymap() {
 }
 apply_hostname() { hostnamectl set-hostname "$HOSTNAME_VALUE"; }
 
+# Açılış menüsü 5 saniye görünsün (Windows'u ya da önceki nos sürümünü seçebilmek için).
+# bootc "timeout 5" yazmak istiyor ama sadece loader.conf yoksa; kurulumda systemd-boot
+# önce satırları kapalı (#) bir loader.conf oluşturduğu için menü hiç görünmüyor.
+# bootc bu dosyaya sonra dokunmuyor. EFI bölümü salt okunur bağlıysa geçici olarak açılır.
+apply_bootmenu() {
+  local conf=/boot/loader/loader.conf ro=0
+  [[ -f "$conf" ]] || return 0
+  grep -q '^timeout' "$conf" && return 0
+  if findmnt -no OPTIONS /boot | tr ',' '\n' | grep -qx ro; then
+    ro=1
+    mount -o remount,rw /boot || return 1
+  fi
+  local rc=0
+  { printf 'timeout 5\n'; grep -v '^#\?timeout' "$conf"; } >"$conf.new" &&
+    mv "$conf.new" "$conf" || rc=1
+  ((ro)) && mount -o remount,ro /boot
+  return $rc
+}
+
 # btrfs'te alt birimin (subvolume) kök dizininin inode numarası her zaman 256.
 home_is_subvolume() { [[ "$(stat -c %i /var/home 2>/dev/null)" == 256 ]]; }
 
@@ -246,6 +265,7 @@ apply_all() {
     run_step "Dil" apply_locale &&
     run_step "Klavye" apply_keymap &&
     run_step "Bilgisayar adı" apply_hostname &&
+    run_step "Açılış menüsü (5 sn)" apply_bootmenu &&
     run_step "Ev dizini (snapshot için)" apply_home_subvolume &&
     run_step "Kullanıcı" apply_user &&
     run_step "Şifre" apply_password &&
