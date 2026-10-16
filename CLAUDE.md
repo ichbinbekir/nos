@@ -34,20 +34,26 @@ Yapı iki kaynaktan birleştirildi:
 - `Containerfile`: Build aşamaları.
 - `build_files/build.sh`: Paket listesi, servisler ve ayarlar. Değişikliklerin çoğu burada yapılır.
 - `build_files/aur.sh`: AUR paketlerinin listesi (`AUR_PACKAGES`) ve derlenmesi.
-- `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. `bootc-rootfs.sh` ve `build-bootc.sh` değiştirildi; değişiklikler dosyaların başında yazıyor.
+- `build_files/bootc/`: bootcrew betikleri ve Apache-2.0 `LICENSE` dosyası. `bootc-rootfs.sh` ve `build-bootc.sh` değiştirildi; değişiklikler dosyaların başında yazıyor. Ayrıca `Containerfile`: `nos-bootc` imajı (aşağıda).
 - `system_files/`: İmaja olduğu gibi kopyalanan dosyalar (SDDM Wayland ayarı, sudoers, resolv.conf tmpfiles).
-- `Justfile`: `build`, `rechunk` (chunkah), `disk-image`, `convert` (vdi ya da qcow2).
-- `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC ve elle tetikleme. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa; anahtar şifreli olduğu için şifresi `COSIGN_PASSWORD` secret'ında).
+- `Justfile`: `build`, `build-bootc`, `rechunk` (chunkah), `disk-image`, `convert` (vdi ya da qcow2).
+- `.github/workflows/build.yml`: Push, PR, her gün 04:00 UTC, elle ve "Build bootc" bitince (`workflow_run`; zamanlanmış bootc çalışmalarından sonra değil). Önce `check` işi `nos-bootc:latest` var mı bakar; yoksa (ilk kurulum) build hata vermeden atlanır. Build → rechunk → push (`latest`, `YYYYMMDD`, kısa SHA) → cosign imzası (`SIGNING_SECRET` secret'ı tanımlıysa; anahtar şifreli olduğu için şifresi `COSIGN_PASSWORD` secret'ında).
+- `.github/workflows/build-bootc.yml`: `nos-bootc` imajını build eder (`ghcr.io/<sahip>/nos-bootc:<sürüm>` ve `:latest`). Her gün 03:00 UTC yeni bootc sürümü var mı bakar (yoksa atlar); pazartesileri sürüm aynı olsa da yeniden derler (Arch kütüphaneleri için); bootc derleme dosyaları değişince ve elle tetiklenince her zaman derler.
 - `.github/workflows/build-disk.yml`: Elle tetikleniyor. Yayınlanmış imajdan sanal makine için VirtualBox (vdi, varsayılan) ya da QEMU (qcow2) disk imajı üretiyor. Sahibi VirtualBox kullanıyor.
 - `LICENSE`: Proje MIT. İstisnalar Apache-2.0: `build_files/bootc/` (kendi `LICENSE` dosyası korunmalı) ve Justfile'daki `rechunk` tarifi. Başka projelerden kod alınırsa kaynağı ve lisansı belirtilir, `LICENSE`'taki istisnalar listesine eklenir.
 - `cosign.pub`: İmza doğrulama anahtarı. `cosign.key` `.gitignore`'da, asla commit'lenmemeli.
 
 ### Build aşamaları
 
+**nos-bootc** (`build_files/bootc/Containerfile`, ayrı imaj): Arch imajında bootc'nin yayınlanmış bir sürümünü (`BOOTC_VERSION`, boşsa en sonuncusu) SELinux desteği olmadan derler; son aşama `FROM scratch` ve içinde sadece bootc'nin kurulum dosyaları var (Arch ya da derleme araçları yok). bootc 1.17'den beri varsayılan olarak libselinux istiyor; Arch'ın resmi depolarında yok. Bu yüzden `CARGO_OPTIONS='--no-default-features --features "install-to-disk pre-6.15"'` kullanılıyor. bootc'ye yeni bir varsayılan özellik eklenirse bu listeye eklenmesi gerekebilir (her crate'in `[features] default`'una bak). bootc derlemesi kendi man sayfalarını üretmek için bootc'yi ikinci kez derliyor (~5–6 dk); bilerek bırakıldı (bootc Makefile'ı man sayfalarını zorunlu tutuyor, atlamak kırılgan; zaten sadece haftalık).
+
+**nos** (`Containerfile`):
 1. `ctx`: `build_files` ve `system_files`. Sadece bind mount ile kullanılır, imaja girmez.
-2. `bootc-builder`: bootc'nin en son yayınlanmış sürümünü (`vX.Y.Z` etiketi) SELinux desteği olmadan derler. bootc 1.17'den beri varsayılan olarak libselinux istiyor; Arch'ın resmi depolarında yok. Bu yüzden `CARGO_OPTIONS='--no-default-features --features "install-to-disk pre-6.15"'` kullanılıyor. bootc'ye yeni bir varsayılan özellik eklenirse bu listeye eklenmesi gerekebilir (her crate'in `[features] default`'una bak).
+2. `bootc`: `BOOTC_IMAGE` (varsayılan `ghcr.io/ichbinbekir/nos-bootc:latest`; CI ve Justfile sahibin adını küçük harfle veriyor).
 3. `aur-builder`: AUR paketlerini `build` kullanıcısıyla `makepkg` ile derler.
-4. `system`: Arch imajı + bootc → pacman yolları `/usr/lib/sysimage`'a taşınır → `build.sh` → `initramfs.sh` → `bootc-rootfs.sh` → `bootc container lint`.
+4. `system`: Arch imajı + `COPY --from=bootc / /` → pacman yolları `/usr/lib/sysimage`'a taşınır → `build.sh` → `initramfs.sh` → `bootc-rootfs.sh` → `bootc container lint`.
+
+Önceden derlenmiş bootc, Arch kütüphaneleri büyük sürüm atlarsa (soname değişikliği) bozulabilir. Haftalık yeniden derleme bunu sınırlıyor; olursa `bootc container lint` bootc'yi çalıştırdığı için ana build düşer ve bozuk imaj yayınlanmaz. Çözüm: "Build bootc"u elle çalıştırmak (bitince ana build kendiliğinden çalışır).
 
 ## Teknik notlar
 
@@ -70,11 +76,10 @@ Yapı iki kaynaktan birleştirildi:
 
 ## Açık konular
 
-- **Hiç build edilmedi.** İlk CI çalışmasında hata çıkması olası: AUR adımı, NoExtract sonrası yeniden kurulum, ufw'nin build sırasında kural yazması, `bootc container lint`.
 - **Dizüstü mü masaüstü mü bilinmiyor.** Intel tümleşik grafik + NVIDIA'lı bir dizüstüyse (hibrit grafik) ek ayar gerekebilir.
 - **Snapper (planlandı, sahibi kesin istiyor):** btrfs üzerinde `/var/home` için otomatik anlık görüntü. Henüz eklenmedi.
 - **Windows ile çift önyükleme (dual boot) isteniyor.** README'deki kurulum `--wipe` ile bütün diski siliyor; çift önyükleme için `bootc install to-filesystem` ile hazır bir bölüme kurulum yolu yazılmalı. Windows'un EFI bölümü genelde 100 MB ve systemd-boot çekirdek + initramfs'i (NVIDIA ile büyük) oraya koyuyor; yer yetmeyebilir. Sahibinin ayrı bir diski olup olmadığı soruldu.
-- **Build süresi:** bootc her build'de kaynaktan derleniyor (10–20 dk). Planlanan iyileştirme: bootc'yi ayrı, küçük bir imaj olarak (ör. `nos-bootc`) sadece yeni bootc sürümünde ve haftada bir derleyip ana build'de `COPY --from` ile kullanmak. Arch kütüphaneleri değişip bootc bozulursa `bootc container lint` adımı bunu yakalar.
+- **Build süresi:** Önceden ~25 dk'nın ~13–14 dk'sı bootc derlemesiydi. bootc ayrı `nos-bootc` imajına taşındı; günlük build'in ~10 dk'ya inmesi bekleniyor (henüz ölçülmedi). Cache (GitHub Actions önbelleği) bilerek kullanılmadı: Arch imajı sık değiştiği için önbellek sık geçersiz oluyor, kazancı düşük. İlk push'ta ana build `nos-bootc` olmadığı için atlanacak, "Build bootc" bitince kendiliğinden çalışacak; bu akış henüz denenmedi. `nos-bootc` paketinin GitHub'daki görünürlüğü (özel/herkese açık) kontrol edilmedi; ana build giriş yaptığı için ikisi de çalışır.
 - **İlk başarılı build (`0cb41f8`):** İmaj oluştu ve yüklendi; imza adımı `COSIGN_PASSWORD` eksik olduğu için düştü (düzeltildi). Günlükte zararsız uyarılar: lint `runtime-deps: chcon` (SELinux yok, sorun değil), `archlinux-keyring` yeniden kurulurken "no secret key" (Docker imajında pacman-key gizli anahtarı yok; paket imza doğrulaması çalışıyor), `.pacnew` dosyaları (`build.sh` sonunda siliniyor). İkinci build (`e0a3386`) imza dahil tamamen başarılı (~25 dk). Sağlayıcı seçimleri: `qt6-multimedia-backend` → `qt6-multimedia-ffmpeg`, `oci-runtime` → `crun` (ikisi de doğru varsayılan); `tessdata` → `tesseract-data-afr` (yanlış, `tesseract-data-eng`/`-tur` listeye eklendi). Ana kurulum ~4.6 GB; en büyükleri `nvidia-utils` (~950 MB), `qt6-webengine` (~280 MB, KDE bileşenlerinin bağımlılığı), `linux`, firmware'ler.
 - **Rechunk doğrulaması:** chunkah'ın pacman desteği var (`alpm`) ve veritabanı yerini `pacman.conf`'taki `DBPath`'ten okuyor (bizde `/usr/lib/sysimage/lib/pacman`). Yayınlanan imaj 128 katmanlı ve katman boyutları çok çeşitli (0.7–443 MB), paket bazlı bölmeye uyuyor. Ama günlükte alpm'in bulunduğu henüz görülmedi; bir sonraki "Rechunk image" günlüğünde `alpm` aranmalı. AUR paketleri (Helium) `pacman -U` ile kurulduğu için veritabanında, ayrı bileşen olarak gruplanıyor. bootc, initramfs ve system_files paketsiz dosyalar.
 - pacman `--noconfirm` ile sanal paketlerde (ör. `phonon-qt6-backend`) varsayılan sağlayıcıyı seçiyor. İlk build günlüğünden kontrol edilmeli; istenmeyen ya da ağır bir seçim varsa doğru sağlayıcı listeye yazılmalı (`noto-fonts`, `noto-fonts-emoji`, `pipewire-jack` bu yüzden listede).

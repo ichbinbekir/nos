@@ -6,12 +6,22 @@ on:
       - master
     paths-ignore:
       - '**.md'
+      # Sadece bootc imajını ilgilendiren dosyalar; onları build-bootc.yml build eder,
+      # bitince bu workflow'u kendisi tetikler.
+      - 'build_files/bootc/build-bootc.sh'
+      - 'build_files/bootc/Containerfile'
+      - '.github/workflows/build-bootc.yml'
   pull_request:
     branches:
       - master
   # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
   schedule:
     - cron: '0 4 * * *'
+  # bootc imajı push ya da elle tetiklemeyle yeniden build edilince yeni bootc ile build et.
+  # Günlük zamanlanmış bootc kontrolünden sonra tetiklenmez; onu 04:00'teki build alır.
+  workflow_run:
+    workflows: ["Build bootc"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +36,32 @@ env:
   IMAGE_NAME: nos
 
 jobs:
+  # bootc imajı henüz yoksa (ilk kurulum) build'i hata vermeden atla;
+  # bootc imajı bitince bu workflow workflow_run ile yeniden çalışır.
+  check:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule')
+    runs-on: ubuntu-26.04
+    outputs:
+      bootc_available: ${{ steps.bootc.outputs.available }}
+    steps:
+      - name: Check bootc image
+        id: bootc
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if podman pull --quiet "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc:latest" >/dev/null 2>&1; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::nos-bootc imajı henüz yok. 'Build bootc' bitince bu build kendiliğinden çalışacak."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: check
+    if: needs.check.outputs.bootc_available == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 120
     env:
@@ -43,22 +78,24 @@ jobs:
 
       # Registry büyük harf kabul etmediği için kullanıcı adı küçük harfe çevrilir
       - name: Set registry
-        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+        run: |
+          echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          echo "BOOTC_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc:latest" >> "$GITHUB_ENV"
 
-      - name: Build image
-        run: just build
-
-      - name: Rechunk image
-        run: just rechunk
-
+      # Build sırasında nos-bootc imajı çekildiği için giriş build'den önce yapılır.
       - name: Log in to registry
-        if: github.event_name != 'pull_request'
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
           # cosign Docker'ın oturum bilgisini kullanıyor
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build image
+        run: just build
+
+      - name: Rechunk image
+        run: just rechunk
 
       - name: Push image
         if: github.event_name != 'pull_request'

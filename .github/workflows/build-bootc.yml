@@ -1,0 +1,82 @@
+name: Build bootc
+
+# nos-bootc imajını (sadece derlenmiş bootc) build eder. Ana build (build.yml) bootc'yi
+# her gün derlemek yerine bu imajdan kopyalar.
+#
+# Ne zaman derlenir:
+# - Her gün 03:00 UTC'de (ana build'den bir saat önce) bootc'nin yeni bir sürümü var mı
+#   bakılır; varsa derlenir, yoksa birkaç saniyede biter.
+# - Pazartesileri sürüm aynı olsa da yeniden derlenir: Arch kütüphaneleri değiştikçe bootc
+#   en fazla bir haftalık kalsın.
+# - bootc derleme dosyaları değişince ve elle tetiklenince her zaman derlenir.
+# Push ya da elle tetiklenen bir derlemeden sonra ana build kendiliğinden çalışır.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'build_files/bootc/build-bootc.sh'
+      - 'build_files/bootc/Containerfile'
+      - '.github/workflows/build-bootc.yml'
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      # Registry büyük harf kabul etmediği için kullanıcı adı küçük harfe çevrilir
+      - name: Find latest bootc version
+        run: |
+          set -euo pipefail
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc" >> "$GITHUB_ENV"
+          VERSION=$(git ls-remote --tags --refs https://github.com/bootc-dev/bootc.git 'v*' |
+            awk -F/ '{print $3}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+          test -n "$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "En son bootc sürümü: $VERSION"
+
+      - name: Log in to registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Decide whether to build
+        id: decide
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == schedule && "$(date -u +%u)" != 1 ]] &&
+            podman pull --quiet "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "bootc $VERSION zaten derlenmiş, haftalık yenileme günü değil; atlanıyor."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build bootc
+        if: steps.decide.outputs.build == 'true'
+        run: just build-bootc "$VERSION"
+
+      - name: Push image
+        if: steps.decide.outputs.build == 'true'
+        run: |
+          set -euxo pipefail
+          for tag in "$VERSION" latest; do
+            podman push nos-bootc:latest "$IMAGE:$tag"
+          done

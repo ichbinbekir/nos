@@ -1,14 +1,19 @@
 image_name := env("IMAGE_NAME", "nos")
 tag := env("IMAGE_TAG", "latest")
 filesystem := env("BUILD_FILESYSTEM", "btrfs")
+bootc_image := env("BOOTC_IMAGE", "ghcr.io/ichbinbekir/nos-bootc:latest")
 
 [private]
 default:
     @just --list
 
-# İmajı build eder
-build $image_name=image_name $tag=tag:
-    podman build --pull=newer --file Containerfile --tag "${image_name}:${tag}" .
+# İmajı build eder (bootc, bootc_image imajından kopyalanır)
+build $image_name=image_name $tag=tag $bootc_image=bootc_image:
+    podman build --pull=newer --file Containerfile --build-arg BOOTC_IMAGE="${bootc_image}" --tag "${image_name}:${tag}" .
+
+# bootc'yi derleyip sadece onu içeren küçük imajı build eder. version boşsa en son sürüm.
+build-bootc $version="" $image_name="nos-bootc":
+    podman build --pull=newer --file build_files/bootc/Containerfile --build-arg BOOTC_VERSION="${version}" --tag "${image_name}:latest" build_files/bootc
 
 # İmajı, güncellemelerde sadece değişen kısımlar indirilecek şekilde katmanlara böler (ublue-os/image-template, Apache-2.0)
 rechunk $image_name=image_name $tag=tag:

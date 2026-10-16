@@ -1,0 +1,23 @@
+# nos-bootc: Derlenmiş bootc dosyalarından oluşan küçük bir imaj.
+# Ana imaj (../../Containerfile) bootc'yi her gün derlemek yerine buradan kopyalar.
+# .github/workflows/build-bootc.yml tarafından sadece yeni bootc sürümünde, haftada bir
+# ve bu dosyalar değişince build edilir.
+
+FROM docker.io/archlinux/archlinux:latest AS builder
+
+RUN pacman -Syu --noconfirm make git rust go-md2man ostree glibc pkgconf
+
+# Boşsa en son yayınlanmış sürüm derlenir.
+ARG BOOTC_VERSION=""
+
+WORKDIR /home/build
+COPY build-bootc.sh /build-bootc.sh
+RUN BOOTC_VERSION="${BOOTC_VERSION}" bash /build-bootc.sh
+
+# Son imajda Arch ya da derleme araçları yok, sadece bootc'nin kurulum dosyaları.
+FROM scratch
+COPY --from=builder /output /
+
+LABEL org.opencontainers.image.title="nos-bootc"
+LABEL org.opencontainers.image.description="Arch Linux için derlenmiş bootc (nos imajı için)"
+LABEL org.opencontainers.image.source="https://github.com/ichbinbekir/nos"

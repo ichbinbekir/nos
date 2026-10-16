@@ -1,16 +1,16 @@
+# bootc Arch depolarında yok. Kaynak koddan derlenmiş hali ayrı bir imajda duruyor
+# (build_files/bootc/Containerfile, .github/workflows/build-bootc.yml); burada sadece
+# dosyaları kopyalanır.
+ARG BOOTC_IMAGE=ghcr.io/ichbinbekir/nos-bootc:latest
+
 # Build betikleri ve sistem dosyaları ayrı bir aşamada tutulur, son imaja kopyalanmaz.
 FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
 
-FROM docker.io/archlinux/archlinux:latest AS base
+FROM ${BOOTC_IMAGE} AS bootc
 
-# bootc Arch depolarında yok, kaynak koddan derlenir (bootcrew/mono).
-FROM base AS bootc-builder
-RUN pacman -Syu --noconfirm make git rust go-md2man ostree glibc pkgconf
-WORKDIR /home/build
-RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
-    bash /ctx/bootc/build-bootc.sh
+FROM docker.io/archlinux/archlinux:latest AS base
 
 # AUR paketleri ayrı bir aşamada derlenir; makepkg root olarak çalışmadığı için
 # bu aşamada ayrı bir kullanıcı açılır. Son imaja sadece paket dosyaları geçer.
@@ -20,7 +20,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
 FROM base AS system
 
-COPY --from=bootc-builder /output /
+COPY --from=bootc / /
 
 # pacman'in /var altındaki her şeyi /usr/lib/sysimage'a taşınır: bootc'de /var imajın
 # parçası olmadığı için paket veritabanı /usr ile birlikte güncellenmeli (bootcrew/mono).
