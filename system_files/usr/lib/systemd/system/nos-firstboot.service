@@ -1,0 +1,19 @@
+[Unit]
+Description=nos ilk kurulum (dil, klavye, kullanıcı)
+After=systemd-firstboot.service systemd-vconsole-setup.service systemd-user-sessions.service dbus.service
+Before=display-manager.service getty@tty1.service
+ConditionPathExists=!/var/lib/nos/firstboot-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /usr/libexec/nos-firstboot
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

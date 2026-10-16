@@ -55,13 +55,9 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
      bootc install to-disk --composefs-backend --bootloader systemd \
        --filesystem btrfs --wipe /dev/nvme0n1
    ```
-4. Yeniden başlat. İlk açılışta dil, klavye düzeni, saat dilimi ve root şifresi sorulur.
-5. Giriş ekranında henüz kullanıcı yok. `Ctrl+Alt+F2` ile metin ekranına geç, `root` ile giriş yap ve kullanıcını oluştur:
-   ```
-   useradd -m -G wheel <kullanıcı-adı>
-   passwd <kullanıcı-adı>
-   ```
-   `Ctrl+Alt+F1` ile giriş ekranına dön.
+4. Yeniden başlat. İlk açılışta metin ekranında sırayla saat dilimi, sistem dili, klavye düzeni, kullanıcı adı ve şifre sorulur. Bitince giriş ekranı açılır.
+
+`root` hesabı kilitli; yönetici işleri için `sudo` kullanılır (ilk açılışta oluşturulan kullanıcı `sudo` kullanabilir).
 
 ### Sanal makinede denemek (VirtualBox)
 
@@ -72,7 +68,7 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
    - Disk: "Var olan bir sanal sabit disk dosyası kullan" → `disk.vdi`
    - **Sistem → Anakart → "EFI'yi etkinleştir" işaretli olmalı.** Önyükleyici sadece EFI ile çalışıyor; işaretli değilse sistem açılmaz.
    - En az 4 GB RAM, 2 işlemci. Ekran → Grafik denetleyicisi: VMSVGA.
-4. Aç. İlk açılış adımları yukarıdaki 4. ve 5. adımlarla aynı.
+4. Aç. İlk açılış adımları yukarıdaki 4. adımla aynı.
 
 Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girmez; ekran VirtualBox'ın kendi grafik sürücüsüyle çalışır, masaüstü biraz yavaş olabilir. Disk 20 GB.
 

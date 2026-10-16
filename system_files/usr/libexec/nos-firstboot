@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# İlk açılışta, giriş ekranından önce metin ekranında çalışır: dil, klavye düzeni ve
+# kullanıcı hesabını sorar. root hesabı kilitli kalır; yönetici işleri sudo ile yapılır.
+# Saat dilimini systemd-firstboot daha önce soruyor.
+
+set -uo pipefail
+
+MARK=/var/lib/nos/firstboot-done
+
+done_mark() {
+  mkdir -p "${MARK%/*}"
+  touch "$MARK"
+}
+
+# Zaten normal bir kullanıcı varsa (ör. elle oluşturulduysa) hiçbir şey sorma.
+if getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { found = 1 } END { exit !found }'; then
+  done_mark
+  exit 0
+fi
+
+clear
+echo "=============================================="
+echo "  nos - ilk kurulum"
+echo "=============================================="
+echo
+
+# Dil
+while :; do
+  read -rp "Sistem dili: [1] Türkçe  [2] English  (varsayılan 1): " choice
+  case "${choice:-1}" in
+    1) locale=tr_TR.UTF-8 keymap=trq; break ;;
+    2) locale=en_US.UTF-8 keymap=us; break ;;
+  esac
+done
+localectl set-locale "LANG=$locale"
+
+# Klavye düzeni. localectl bunu giriş ekranı ve masaüstü için de ayarlar.
+while :; do
+  read -rp "Klavye düzeni (trq = Türkçe Q, trf = Türkçe F, us = İngilizce; varsayılan $keymap): " choice
+  choice="${choice:-$keymap}"
+  if localectl list-keymaps | grep -qx "$choice"; then
+    localectl set-keymap "$choice"
+    break
+  fi
+  echo "Bilinmeyen düzen: $choice"
+done
+
+# Kullanıcı
+echo
+while :; do
+  read -rp "Kullanıcı adı (küçük harf, ör. bekir): " user
+  if [[ ! "$user" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+    echo "Geçersiz ad: küçük harf, rakam, - ve _ kullanılabilir; harfle başlamalı."
+  elif id "$user" &>/dev/null; then
+    echo "Bu ad sistemde zaten var, başka bir ad seç."
+  else
+    break
+  fi
+done
+read -rp "Görünen ad (isteğe bağlı, ör. Bekir): " fullname
+
+useradd -m -G wheel -c "$fullname" "$user"
+echo
+echo "Şifre belirle (yazarken ekranda görünmez):"
+until passwd "$user"; do
+  echo "Tekrar dene."
+done
+
+done_mark
+echo
+echo "Hazır. Giriş ekranı açılıyor..."
+sleep 2

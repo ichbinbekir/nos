@@ -2,3 +2,7 @@
 cosign.key
 output/
 *_chunkah_*/
+# Sanal makine disk imajları
+*.vdi
+*.qcow2
+*.raw

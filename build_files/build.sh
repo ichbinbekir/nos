@@ -106,11 +106,12 @@ pacman -S --noconfirm --needed "${PACKAGES[@]}"
 # AUR paketleri (aur.sh tarafından derlendi). Bağımlılıkları depolardan gelir.
 find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U --noconfirm
 
-# Yerel ayarlar. Hangisinin kullanılacağı ilk açılışta systemd-firstboot ile seçilir.
+# Yerel ayarlar. Hangisinin kullanılacağı ilk açılışta nos-firstboot ile seçilir.
 sed -i -e 's/^#\(en_US.UTF-8 UTF-8\)/\1/' -e 's/^#\(tr_TR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
 locale-gen
 
-# İlk açılışta systemd-firstboot dil, klavye, saat dilimi ve root şifresini sorar. machine-id "uninitialized" olunca sistem ilk açılışı algılar.
+# machine-id "uninitialized" olunca sistem ilk açılışı algılar: systemd-firstboot saat dilimini,
+# nos-firstboot (system_files) dil, klavye ve kullanıcıyı sorar. root hesabı kilitli kalır.
 echo "uninitialized" >/etc/machine-id
 
 systemctl enable \
@@ -120,7 +121,8 @@ systemctl enable \
   ufw.service \
   power-profiles-daemon.service \
   systemd-resolved.service \
-  systemd-timesyncd.service
+  systemd-timesyncd.service \
+  nos-firstboot.service
 systemctl set-default graphical.target
 
 # Güvenlik duvarı (ufw): Gelen bağlantılar varsayılan olarak kapalı, giden açık.
