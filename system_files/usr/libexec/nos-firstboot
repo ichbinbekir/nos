@@ -201,24 +201,6 @@ apply_home_subvolume() {
   btrfs subvolume create /var/home && chmod 0755 /var/home
 }
 
-# ~/.cache ayrı bir alt birim yapılır: btrfs snapshot'ları iç içe alt birimleri almıyor,
-# böylece sürekli değişen önbellekler snapshot'larda yer kaplamaz. Kullanıcı yeni
-# oluşturulduğu için klasör yok ya da boş; doluysa dokunulmaz.
-apply_cache_subvolume() {
-  home_is_subvolume || return 0
-  local home cache
-  home=$(getent passwd "$USERNAME" | cut -d: -f6)
-  cache="$home/.cache"
-  [[ "$(stat -c %i "$cache" 2>/dev/null)" == 256 ]] && return 0
-  if [[ -d "$cache" ]]; then
-    [[ -z "$(ls -A "$cache")" ]] || return 0
-    rmdir "$cache"
-  fi
-  btrfs subvolume create "$cache" &&
-    chown "$USERNAME:$USERNAME" "$cache" &&
-    chmod 0700 "$cache"
-}
-
 # Ev dizininin otomatik snapshot'ları: son 3 gün ve son 2 hafta. Kullanıcı snapper'ı ve
 # /home/.snapshots'u sudo olmadan kullanabilir.
 apply_snapper() {
@@ -267,7 +249,6 @@ apply_all() {
     run_step "Ev dizini (snapshot için)" apply_home_subvolume &&
     run_step "Kullanıcı" apply_user &&
     run_step "Şifre" apply_password &&
-    run_step "Önbellek (snapshot dışı)" apply_cache_subvolume &&
     run_step "Otomatik snapshot" apply_snapper
 }
 

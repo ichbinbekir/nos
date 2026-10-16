@@ -104,7 +104,7 @@ Sistem dosyaları için snapshot gerekmiyor; onlar salt okunur ve `sudo bootc ro
 
 Snapshot yedek değildir: aynı diskte durur. Disk bozulursa snapshot'lar da gider; önemli dosyaların ayrıca başka bir yerde yedeği olmalı. Büyük bir dosya silindiğinde yer, o dosyayı içeren en eski snapshot silinince (en geç 2 hafta) açılır.
 
-`~/.cache` snapshot'lara girmiyor (ayrı bir btrfs alt birimi). Snapshot'a girmesini istemediğin büyük bir klasör (ör. oyunlar) için de aynısını yapabilirsin: `btrfs subvolume create ~/Oyunlar`. Alt birimin içindekiler ana snapshot'lara dahil edilmez.
+Snapshot'a girmesini istemediğin büyük bir klasörü (ör. oyunlar) ayrı bir btrfs alt birimi yapabilirsin: `btrfs subvolume create ~/Oyunlar`. Alt birimin içindekiler ana snapshot'lara dahil edilmez.
 
 #### Başka bir sistemden `bootc switch` ile gelenler
 
