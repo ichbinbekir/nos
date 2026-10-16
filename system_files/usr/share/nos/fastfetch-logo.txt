@@ -1,0 +1,27 @@
+$4           .-"""-.
+$4          ( (   ) )
+$4           '-...-'
+$5             |=|$5_
+$5             | |[_]
+$5           __|_|__
+       $1..__cccccc__..
+    $1._cccccccccccccccc_.
+   $1/cccccccccccccccccccc\
+  $1/cccccccccccccccccccccc\
+ $1/cccccccccccccccccccccccc\
+ $1:cccccccccccccccccccccccc:
+ $1:cccccccccccccccccccccccc:
+ $1:$3;;;;;;;;;;;;;;;;;;;;;;;;$1:
+ $1:$3;$2MM$3;;;;$2MM==============>$1:
+ $1:$3;$2MMMM$3;;$2MM$3;$2MMMMMM$3;$2MMMMMM$3;$1:
+ $1:$3;$2MMMM$3;;$2MM$3;$2MM$3;;$2MM$3;$2MM$3;;;;;$1:
+ $1:$3;$2MM$3;;$2MMMM$3;$2MM$3;;$2MM$3;$2MMMMMM$3;$1:
+ $1:$3;$2MM$3;;$2MMMM$3;$2MM$3;;$2MM$3;;;;;$2MM$3;$1:
+ $1:$3;$2MM$3;;;;$2MM$3;$2MMMMMM$3;$2MMMMMM$3;$1:
+ $1:$3;;;;;;;;;;;;;;;;;;;;;;;;$1:
+ $1:cccccccccccccccccccccccc:
+ $1:cccccccccccccccccccccccc:
+ $1:cccccccccccccccccccccccc:
+ $1:cccccccccccccccccccccccc:
+ $1\cccccccccccccccccccccccc/
+  $1'``````cccccccccc``````'

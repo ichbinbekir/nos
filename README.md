@@ -27,6 +27,7 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 - **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Gwenview, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak)
 - **Tarayıcı:** Helium
 - **Araçlar:** fish, fastfetch, git, ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
+- **Görünüm:** Sistem adı her yerde `nos` olarak görünür. fastfetch'te kendi logosu var: mavi bir NOS (nitro) tüpü. İsim de buradan geliyor.
 
 Tam liste: [build_files/build.sh](build_files/build.sh) ve [build_files/aur.sh](build_files/aur.sh).
 

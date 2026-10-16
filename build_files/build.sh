@@ -142,6 +142,28 @@ ufw allow 1714:1764/tcp comment 'KDE Connect'
 ufw allow 1714:1764/udp comment 'KDE Connect'
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
 
+# Sistem adı: Görünen yerlerde (fastfetch, KDE "Bu Sistem Hakkında", açılış menüsü,
+# bootc status) "nos" yazar. ID_LIKE=arch, Arch'a göre davranan araçlar bozulmasın diye
+# (EndeavourOS, CachyOS da böyle). Sürüm, imajın build tarihi.
+# os-release filesystem paketinin dosyası; imaj her build'de sıfırdan kurulduğu için
+# paket güncellemesi bunu ezmez. /etc/os-release'in bağlantı olduğundan da emin olunur
+# (Arch Docker imajı onu düz dosyaya çeviriyor).
+cat >/usr/lib/os-release <<EOF
+NAME="nos"
+PRETTY_NAME="nos"
+ID=nos
+ID_LIKE=arch
+BUILD_ID=rolling
+VERSION_ID=$(date -u +%Y%m%d)
+ANSI_COLOR="1;94"
+HOME_URL="https://github.com/ichbinbekir/nos"
+DOCUMENTATION_URL="https://github.com/ichbinbekir/nos#readme"
+SUPPORT_URL="https://github.com/ichbinbekir/nos/issues"
+BUG_REPORT_URL="https://github.com/ichbinbekir/nos/issues"
+LOGO=archlinux-logo
+EOF
+ln -sf ../usr/lib/os-release /etc/os-release
+
 # NoExtract kaldırılıp paketler yeniden kurulunca pacman, Docker imajının kendi
 # ayarlarını korumak için yeni sürümleri .pacnew olarak bırakıyor; gerekmiyorlar.
 find /etc -name '*.pacnew' -delete

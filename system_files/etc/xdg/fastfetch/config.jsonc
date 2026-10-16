@@ -1,0 +1,23 @@
+// nos fastfetch ayarı (sistem geneli). Kullanıcı kendi ayarını
+// ~/.config/fastfetch/config.jsonc'ye yazarsa bu dosya yerine o kullanılır.
+// Logo tools/logo-gen.py ile üretiliyor; renkler oradakilerle aynı olmalı.
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "file",
+    "source": "/usr/share/nos/fastfetch-logo.txt",
+    "color": {
+      "1": "94",       // gövde: açık mavi
+      "2": "97",       // harfler ve ok: beyaz
+      "3": "38;5;208", // etiket: turuncu
+      "4": "90",       // tutamak: koyu gri
+      "5": "37"        // vana: krom
+    }
+  },
+  "display": {
+    "color": {
+      "keys": "94",
+      "title": "94"
+    }
+  }
+}
