@@ -1,72 +1,247 @@
 #!/usr/bin/env bash
-# İlk açılışta, giriş ekranından önce metin ekranında çalışır: dil, klavye düzeni ve
-# kullanıcı hesabını sorar. root hesabı kilitli kalır; yönetici işleri sudo ile yapılır.
-# Saat dilimini systemd-firstboot daha önce soruyor.
+# nos ilk kurulum ekranı. İlk açılışta, giriş ekranından önce tty1'de çalışır (nos-firstboot.service).
+#
+# Akış: Önce bütün sorular sorulur, sonra özet gösterilip onay alınır; sistemde hiçbir
+# şey bu onaydan önce değişmez. Uygulama adımları tekrar çalıştırılabilir şekilde
+# yazıldı: bir adım hata verirse kullanıcıya tekrar deneme ya da baştan başlama
+# seçeneği sunulur. Bitti işareti (/var/lib/nos/firstboot-done) ancak her adım
+# başarılı olunca yazılır; yarıda kesilirse (ör. elektrik giderse) bir sonraki
+# açılışta ekran yeniden gelir.
+#
+# root hesabı kilitli kalır; oluşturulan kullanıcı wheel grubunda, sudo kullanabilir.
 
 set -uo pipefail
 
-MARK=/var/lib/nos/firstboot-done
+STATE_DIR=/var/lib/nos
+DONE="$STATE_DIR/firstboot-done"
+STARTED="$STATE_DIR/firstboot-started"
 
-done_mark() {
-  mkdir -p "${MARK%/*}"
-  touch "$MARK"
-}
+ACCENT=4 # Mavi (metin ekranında 16 renk var)
 
-# Zaten normal bir kullanıcı varsa (ör. elle oluşturulduysa) hiçbir şey sorma.
-if getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { found = 1 } END { exit !found }'; then
-  done_mark
+# Ctrl+C ile ekranın kapanıp sistemi kullanıcısız bırakmasını engelle.
+trap '' INT TERM QUIT TSTP
+
+# switch ile gelen sistemler: Kurulum hiç başlamadıysa ve zaten normal bir kullanıcı
+# varsa hiçbir şey sorma.
+if [[ ! -e "$STARTED" ]] && getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { f = 1 } END { exit !f }'; then
+  mkdir -p "$STATE_DIR"
+  touch "$DONE"
   exit 0
 fi
 
-clear
-echo "=============================================="
-echo "  nos - ilk kurulum"
-echo "=============================================="
-echo
+# Metin ekranının varsayılan yazı tipinde ğ, ş, ı, İ yok.
+setfont eurlatgr 2>/dev/null || true
 
-# Dil
-while :; do
-  read -rp "Sistem dili: [1] Türkçe  [2] English  (varsayılan 1): " choice
-  case "${choice:-1}" in
-    1) locale=tr_TR.UTF-8 keymap=trq; break ;;
-    2) locale=en_US.UTF-8 keymap=us; break ;;
+# --- Yardımcılar ---------------------------------------------------------------
+
+header() {
+  clear
+  gum style --border normal --border-foreground "$ACCENT" --padding "0 2" --margin "1 2" \
+    --bold "nos - ilk kurulum" "$1"
+}
+
+error() {
+  gum style --foreground 1 --margin "0 2" "$@"
+}
+
+# gum Esc/Ctrl+C ile çıkınca boş döner; boş cevabı kabul etmeyip soruyu tekrarlarız.
+
+ask_timezone() {
+  header "Saat dilimi (yazarak ara, ok tuşlarıyla seç, Enter)"
+  local tz
+  while :; do
+    tz=$({ echo "Europe/Istanbul"; timedatectl list-timezones | grep -vx "Europe/Istanbul"; } |
+      gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+    [[ -n "$tz" ]] && break
+  done
+  TIMEZONE="$tz"
+}
+
+ask_language() {
+  header "Sistem dili"
+  local choice
+  while :; do
+    choice=$(gum choose --padding "0 2" --selected "Türkçe" "Türkçe" "English") || true
+    [[ -n "$choice" ]] && break
+  done
+  case "$choice" in
+    Türkçe) LOCALE=tr_TR.UTF-8 DEFAULT_KEYMAP=trq ;;
+    English) LOCALE=en_US.UTF-8 DEFAULT_KEYMAP=us ;;
   esac
-done
-localectl set-locale "LANG=$locale"
+}
 
-# Klavye düzeni. localectl bunu giriş ekranı ve masaüstü için de ayarlar.
-while :; do
-  read -rp "Klavye düzeni (trq = Türkçe Q, trf = Türkçe F, us = İngilizce; varsayılan $keymap): " choice
-  choice="${choice:-$keymap}"
-  if localectl list-keymaps | grep -qx "$choice"; then
-    localectl set-keymap "$choice"
-    break
-  fi
-  echo "Bilinmeyen düzen: $choice"
-done
-
-# Kullanıcı
-echo
-while :; do
-  read -rp "Kullanıcı adı (küçük harf, ör. bekir): " user
-  if [[ ! "$user" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-    echo "Geçersiz ad: küçük harf, rakam, - ve _ kullanılabilir; harfle başlamalı."
-  elif id "$user" &>/dev/null; then
-    echo "Bu ad sistemde zaten var, başka bir ad seç."
+ask_keymap() {
+  header "Klavye düzeni"
+  local -A keymaps=(["Türkçe Q"]=trq ["Türkçe F"]=trf ["İngilizce (ABD)"]=us)
+  local default_label choice
+  for default_label in "${!keymaps[@]}"; do
+    [[ "${keymaps[$default_label]}" == "$DEFAULT_KEYMAP" ]] && break
+  done
+  while :; do
+    choice=$(gum choose --padding "0 2" --selected "$default_label" \
+      "Türkçe Q" "Türkçe F" "İngilizce (ABD)" "Diğer...") || true
+    [[ -n "$choice" ]] && break
+  done
+  if [[ "$choice" == "Diğer..." ]]; then
+    header "Klavye düzeni (yazarak ara)"
+    while :; do
+      KEYMAP=$(localectl list-keymaps | gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+      [[ -n "$KEYMAP" ]] && break
+    done
   else
+    KEYMAP="${keymaps[$choice]}"
+  fi
+  # Seçilen düzeni hemen uygula ki sonraki sorularda doğru harfler yazılsın.
+  loadkeys "$KEYMAP" 2>/dev/null || true
+}
+
+ask_hostname() {
+  header "Bilgisayar adı (ağda bu adla görünür)"
+  local name value="${HOSTNAME_VALUE:-nos}"
+  while :; do
+    name=$(gum input --padding "0 2" --value "$value" --char-limit 63 \
+      --placeholder "ör. bekir-pc") || true
+    name="${name,,}"
+    if [[ "$name" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+      break
+    fi
+    error "Geçersiz ad: küçük harf, rakam ve - kullanılabilir; - ile başlayıp bitemez."
+    value="$name"
+  done
+  HOSTNAME_VALUE="$name"
+}
+
+ask_username() {
+  header "Kullanıcı adı (giriş ve ev dizini için; küçük harf)"
+  local name uid value="${USERNAME:-}"
+  while :; do
+    name=$(gum input --padding "0 2" --value "$value" --char-limit 32 \
+      --placeholder "ör. bekir") || true
+    if [[ ! "$name" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+      error "Geçersiz ad: küçük harf, rakam, - ve _ kullanılabilir; harfle başlamalı."
+    elif uid=$(getent passwd "$name" | cut -d: -f3) && [[ -n "$uid" ]] &&
+      { ((uid < 1000 || uid >= 60000)) || [[ ! -e "$STARTED" ]]; }; then
+      # Sistem hesapları hiç kabul edilmez. Normal bir kullanıcı ancak yarım kalmış
+      # bir kurulumun devamıysa kabul edilir (o zaman hesap güncellenir).
+      error "Bu ad sistemde zaten var, başka bir ad seç."
+    else
+      break
+    fi
+    value="$name"
+  done
+  USERNAME="$name"
+}
+
+ask_fullname() {
+  header "Görünen ad (giriş ekranında görünür; isteğe bağlı)"
+  local name
+  name=$(gum input --padding "0 2" --value "${FULLNAME:-${USERNAME^}}" --char-limit 64) || true
+  FULLNAME="${name//:/}"
+}
+
+ask_password() {
+  local p1 p2
+  while :; do
+    header "Şifre ($USERNAME)"
+    p1=$(gum input --padding "0 2" --password --placeholder "Şifre") || true
+    if [[ -z "$p1" ]]; then
+      error "Şifre boş olamaz."
+      sleep 1.5
+      continue
+    fi
+    p2=$(gum input --padding "0 2" --password --placeholder "Şifre (tekrar)") || true
+    if [[ "$p1" != "$p2" ]]; then
+      error "Şifreler aynı değil, tekrar dene."
+      sleep 1.5
+      continue
+    fi
+    break
+  done
+  PASSWORD="$p1"
+}
+
+summary() {
+  header "Özet"
+  gum style --margin "0 2" \
+    "Saat dilimi    : $TIMEZONE" \
+    "Dil            : $LOCALE" \
+    "Klavye         : $KEYMAP" \
+    "Bilgisayar adı : $HOSTNAME_VALUE" \
+    "Kullanıcı adı  : $USERNAME" \
+    "Görünen ad     : ${FULLNAME:-(yok)}" \
+    "Kabuk          : fish"
+  echo
+  gum confirm --padding "0 2" --affirmative "Kur" --negative "Baştan başla" "Bilgiler doğru mu?"
+}
+
+# --- Uygulama adımları (hepsi tekrar çalıştırılabilir) -------------------------
+
+apply_timezone() { timedatectl set-timezone "$TIMEZONE"; }
+apply_locale() { localectl set-locale "LANG=$LOCALE"; }
+apply_keymap() {
+  localectl set-keymap "$KEYMAP" &&
+    { grep -q '^FONT=' /etc/vconsole.conf 2>/dev/null || echo "FONT=eurlatgr" >>/etc/vconsole.conf; }
+}
+apply_hostname() { hostnamectl set-hostname "$HOSTNAME_VALUE"; }
+apply_user() {
+  if getent passwd "$USERNAME" >/dev/null; then
+    usermod -a -G wheel -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+  else
+    useradd -m -G wheel -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+  fi
+}
+apply_password() { printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; }
+
+# Bir adımı çalıştırır; hata verirse ne olacağını kullanıcıya sorar.
+# Dönüş: 0 = başarılı, 1 = kullanıcı baştan başlamak istedi.
+run_step() {
+  local title="$1" fn="$2" out
+  while :; do
+    if out=$("$fn" 2>&1); then
+      gum style --margin "0 2" "[tamam] $title"
+      return 0
+    fi
+    error "[HATA] $title başarısız:" "$out"
+    echo
+    if gum confirm --padding "0 2" --affirmative "Tekrar dene" --negative "Baştan başla" "Ne yapılsın?"; then
+      continue
+    fi
+    return 1
+  done
+}
+
+apply_all() {
+  header "Kuruluyor..."
+  run_step "Saat dilimi" apply_timezone &&
+    run_step "Dil" apply_locale &&
+    run_step "Klavye" apply_keymap &&
+    run_step "Bilgisayar adı" apply_hostname &&
+    run_step "Kullanıcı" apply_user &&
+    run_step "Şifre" apply_password
+}
+
+# --- Ana akış -------------------------------------------------------------------
+
+while :; do
+  ask_timezone
+  ask_language
+  ask_keymap
+  ask_hostname
+  ask_username
+  ask_fullname
+  ask_password
+  summary || continue
+
+  mkdir -p "$STATE_DIR"
+  touch "$STARTED"
+  if apply_all; then
     break
   fi
 done
-read -rp "Görünen ad (isteğe bağlı, ör. Bekir): " fullname
 
-useradd -m -G wheel -c "$fullname" "$user"
+touch "$DONE"
+rm -f "$STARTED"
+unset PASSWORD
 echo
-echo "Şifre belirle (yazarken ekranda görünmez):"
-until passwd "$user"; do
-  echo "Tekrar dene."
-done
-
-done_mark
-echo
-echo "Hazır. Giriş ekranı açılıyor..."
+gum style --margin "0 2" --foreground 2 --bold "Hazır! Giriş ekranı açılıyor..."
 sleep 2

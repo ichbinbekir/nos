@@ -99,6 +99,7 @@ PACKAGES=(
   distrobox
   podman
   python
+  gum # İlk kurulum ekranının (nos-firstboot) arayüzü
 )
 
 pacman -S --noconfirm --needed "${PACKAGES[@]}"
@@ -110,9 +111,14 @@ find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U
 sed -i -e 's/^#\(en_US.UTF-8 UTF-8\)/\1/' -e 's/^#\(tr_TR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
 locale-gen
 
-# machine-id "uninitialized" olunca sistem ilk açılışı algılar: systemd-firstboot saat dilimini,
-# nos-firstboot (system_files) dil, klavye ve kullanıcıyı sorar. root hesabı kilitli kalır.
+# machine-id "uninitialized" olunca sistem ilk açılışı algılar. İlk kurulum soruları
+# (saat dilimi, dil, klavye, bilgisayar adı, kullanıcı) nos-firstboot'ta (system_files);
+# aynı işi yarım yapan systemd-firstboot kapatılır. root hesabı kilitli kalır.
 echo "uninitialized" >/etc/machine-id
+systemctl mask systemd-firstboot.service
+
+# Metin ekranı yazı tipi: varsayılan yazı tipinde ğ, ş, ı, İ yok.
+echo "FONT=eurlatgr" >>/etc/vconsole.conf
 
 systemctl enable \
   sddm.service \

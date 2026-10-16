@@ -1,12 +1,16 @@
 [Unit]
-Description=nos ilk kurulum (dil, klavye, kullanıcı)
-After=systemd-firstboot.service systemd-vconsole-setup.service systemd-user-sessions.service dbus.service
+Description=nos ilk kurulum (saat dilimi, dil, klavye, bilgisayar adı, kullanıcı)
+After=systemd-vconsole-setup.service systemd-user-sessions.service dbus.service
 Before=display-manager.service getty@tty1.service
 ConditionPathExists=!/var/lib/nos/firstboot-done
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/bash /usr/libexec/nos-firstboot
+# Betik beklenmedik şekilde kapanırsa giriş ekranına geçmeden yeniden başlat.
+Restart=on-failure
+RestartSec=1
+Environment=TERM=linux LANG=C.UTF-8
 StandardInput=tty
 StandardOutput=tty
 StandardError=tty
