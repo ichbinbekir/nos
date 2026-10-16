@@ -1,0 +1,11 @@
+[Unit]
+Description=nos güncellemelerini düzenli olarak kontrol et
+
+[Timer]
+# Açılıştan 10 dakika sonra, sonra her 6 saatte bir. İmaj her gün 04:00 UTC'de build ediliyor.
+OnBootSec=10min
+OnUnitInactiveSec=6h
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

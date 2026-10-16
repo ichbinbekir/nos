@@ -1,0 +1,17 @@
+[Unit]
+Description=nos güncellemesini indir (bir sonraki açılışta uygulanır)
+Documentation=man:bootc-upgrade(8)
+# Sadece bootc (composefs) ile açılmış sistemlerde çalış. bootc'nin kendi
+# bootc-fetch-apply-updates'i /run/ostree-booted'a bakıyor; composefs yapısında o dosya yok.
+ConditionKernelCommandLine=composefs
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# --apply yok: bootc güncellemeyi indirip hazırlar, bilgisayarı yeniden başlatmaz.
+# Hazırlanan sürüm bir sonraki açılışta devreye girer.
+ExecStart=/usr/bin/bootc upgrade --quiet
+# Arka planda, masaüstünü yavaşlatmadan çalış.
+Nice=19
+IOSchedulingClass=idle

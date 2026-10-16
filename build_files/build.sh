@@ -128,7 +128,9 @@ systemctl enable \
   power-profiles-daemon.service \
   systemd-resolved.service \
   systemd-timesyncd.service \
-  nos-firstboot.service
+  nos-firstboot.service \
+  nos-update.timer \
+  NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 
 # Güvenlik duvarı (ufw): Gelen bağlantılar varsayılan olarak kapalı, giden açık.
