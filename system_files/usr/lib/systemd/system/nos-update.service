@@ -3,7 +3,10 @@ Description=nos güncellemesini indir (bir sonraki açılışta uygulanır)
 Documentation=man:bootc-upgrade(8)
 # Sadece bootc (composefs) ile açılmış sistemlerde çalış. bootc'nin kendi
 # bootc-fetch-apply-updates'i /run/ostree-booted'a bakıyor; composefs yapısında o dosya yok.
-ConditionKernelCommandLine=composefs
+# bootc açılış satırına sürüme göre "composefs.digest=..." ya da "composefs=..." yazıyor;
+# "|" ile ikisinden biri yeterli.
+ConditionKernelCommandLine=|composefs.digest
+ConditionKernelCommandLine=|composefs
 Wants=network-online.target
 After=network-online.target
 
