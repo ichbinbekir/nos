@@ -82,7 +82,7 @@ Yapı iki kaynaktan birleştirildi:
 
 ## Açık konular
 
-- **Dizüstü mü masaüstü mü bilinmiyor.** Intel tümleşik grafik + NVIDIA'lı bir dizüstüyse (hibrit grafik) ek ayar gerekebilir.
+- **Dizüstü, hibrit grafik (Intel tümleşik + NVIDIA):** `nvidia-prime` (`prime-run`), `switcheroo-control` (servis açık; KDE'de "Ayrık grafik kartıyla çalıştır"), `vulkan-intel`, `intel-media-driver` eklendi. KWin masaüstünü Intel'le çalıştırıyor; NVIDIA sadece istenen uygulamada. NVIDIA'nın `nvidia-suspend/resume/hibernate` servisleri bilerek açılmadı: nvidia-utils'in kendi kurulum betiğine göre 595+ açık modüllerde video belleği uyku sırasında çekirdek tarafından korunuyor, bu servisler gereksiz. `nvidia-powerd` (Dynamic Boost) açılmadı: sadece RTX 30 ve sonrası bazı dizüstülerde çalışıyor, desteklenmeyen kartta servis hata veriyor; NVIDIA kart modeli bilinmiyor. Gerçek donanımda denenmedi (uyku/uyanma, prime-run, pil süresi).
 - **Kişisel ayarlar (dotfiles), ileride:** Sahibi kullandığı ayarları (fish, fastfetch'in terminalde açılması vb.) sonradan bu repoya ya da ayrı bir repoya koyacak ve oradan yükleyecek. İmaja ya da ilk kuruluma şimdilik bu tür kişisel ayar eklenmiyor. Daha sonra istenirse ilk kurulum ekranı bu repoyu çekebilir; istenmeden yapılmamalı.
 - **etckeeper (kararsız):** `/etc`'yi git ile takip etmek önerildi; sahibi kararsız, şimdilik eklenmiyor. Sorulmadan eklenmemeli.
 - **Snapper denenmedi:** Aşağıdaki "Ev dizini snapshot'ları" notuna bak; ilk kurulumdaki alt birim çevirme ve `snapper create-config` gerçek btrfs diskte henüz çalıştırılmadı.

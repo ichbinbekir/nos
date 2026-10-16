@@ -37,6 +37,13 @@ PACKAGES=(
   nvidia-open
   nvidia-utils
 
+  # Hibrit grafik (dizüstü: Intel tümleşik + NVIDIA). Masaüstü Intel ile çalışır,
+  # NVIDIA sadece istenen uygulamalarda devreye girer.
+  nvidia-prime # prime-run <uygulama>: uygulamayı NVIDIA ile çalıştırır
+  switcheroo-control # KDE'de sağ tık > "Ayrık grafik kartıyla çalıştır"
+  vulkan-intel # Intel için Vulkan
+  intel-media-driver # Intel ile donanımsal video çözme (VA-API; Broadwell ve sonrası)
+
   # Sistem
   sudo
   git
@@ -130,6 +137,7 @@ systemctl enable \
   bluetooth.service \
   ufw.service \
   power-profiles-daemon.service \
+  switcheroo-control.service \
   systemd-resolved.service \
   systemd-timesyncd.service \
   nos-firstboot.service \

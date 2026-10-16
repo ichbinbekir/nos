@@ -24,6 +24,7 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 ## İçinde ne var
 
 - **Masaüstü:** KDE Plasma (Wayland), SDDM giriş ekranı
+- **Grafik:** Dizüstü hibrit grafik (Intel tümleşik + NVIDIA). Masaüstü Intel ile çalışır, pil daha uzun gider. Bir uygulamayı NVIDIA ile çalıştırmak için uygulamaya sağ tıklayıp "Ayrık grafik kartıyla çalıştır" ya da terminalde `prime-run <uygulama>`; Steam oyunlarında başlatma seçeneklerine `prime-run %command%`.
 - **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Gwenview, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak), Btrfs Assistant (snapshot)
 - **Tarayıcı:** Helium
 - **Araçlar:** fish, fastfetch, htop, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
