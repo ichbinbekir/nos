@@ -24,9 +24,9 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 ## İçinde ne var
 
 - **Masaüstü:** KDE Plasma (Wayland), SDDM giriş ekranı
-- **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Gwenview, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak)
+- **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Gwenview, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak), Btrfs Assistant (snapshot)
 - **Tarayıcı:** Helium
-- **Araçlar:** fish, fastfetch, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
+- **Araçlar:** fish, fastfetch, htop, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
 - **Görünüm:** Sistem adı her yerde `nos` olarak görünür. fastfetch'te kendi logosu var: mavi bir NOS (nitro) tüpü. İsim de buradan geliyor.
 
 Tam liste: [build_files/build.sh](build_files/build.sh) ve [build_files/aur.sh](build_files/aur.sh).
@@ -46,7 +46,6 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
 1. BIOS/UEFI ayarlarından **Secure Boot'u kapat.** Önyükleyici ve NVIDIA sürücüsü imzalı değil.
 2. Herhangi bir canlı USB ile bilgisayarı aç ve `podman`'i kur.
    - Arch ISO kullanıyorsan açılış menüsünde çekirdek satırının sonuna `cow_spacesize=16G` ekle. Varsayılan 256 MB yazılabilir alan imajı indirmeye yetmiyor. Bu alan RAM'den kullanılıyor.
-   - İmaj GitHub'da gizliyse önce `podman login ghcr.io` ile giriş yap.
 3. Hedef diskin adını bul (`lsblk`; örnek: `/dev/nvme0n1`) ve kur:
    ```
    sudo podman run --rm --privileged --pid=host \
@@ -87,6 +86,45 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 İmaj her gün otomatik olarak yeniden build ediliyor; Arch paketlerindeki güncellemeler bu yolla geliyor. Sistem de güncellemeleri kendisi kontrol ediyor (açılıştan 10 dakika sonra, sonra her 6 saatte bir): yeni sürümü arka planda indirip hazırlıyor, bilgisayarı yeniden başlatmıyor. Hazırlanan sürüm bir sonraki açılışta devreye giriyor. Elle `sudo bootc upgrade` yapmak gerekmiyor; hemen kontrol etmek istersen kullanabilirsin.
 
 İmajda SSH sunucusu açık değil; `ssh` sadece başka makinelere bağlanmak için var.
+
+### Ev dizini snapshot'ları
+
+Ev dizininin (`/home`; dosyalar ve `~/.config` içindeki bütün ayarlar) btrfs snapshot'ı [snapper](http://snapper.io/) ile otomatik alınıyor: son 3 gün ve son 2 hafta saklanıyor, eskileri kendiliğinden siliniyor. Yanlışlıkla silinen bir dosyayı ya da bozulan bir ayarı geri almak için:
+
+- **Btrfs Assistant** uygulamasından (menüde): Snapper sekmesinde snapshot'ları listeler, farkları gösterir, geri yükler.
+- Ya da dosya yöneticisinde `/home/.snapshots/<numara>/snapshot/` içinden eski kopyayı alarak.
+
+| İş | Komut |
+|---|---|
+| Elle snapshot al | `snapper -c home create -d "açıklama"` |
+| Snapshot'ları listele | `snapper -c home list` |
+
+Sistem dosyaları için snapshot gerekmiyor; onlar salt okunur ve `sudo bootc rollback` ile önceki sürüme dönülüyor.
+
+Snapshot yedek değildir: aynı diskte durur. Disk bozulursa snapshot'lar da gider; önemli dosyaların ayrıca başka bir yerde yedeği olmalı. Büyük bir dosya silindiğinde yer, o dosyayı içeren en eski snapshot silinince (en geç 2 hafta) açılır.
+
+#### Başka bir sistemden `bootc switch` ile gelenler
+
+Snapshot ayarını ilk kurulum ekranı yapıyor; `switch` ile gelen sistemlerde o ekran çalışmadığı için ayar yok. Kurmak için (disk btrfs olmalı):
+
+1. Masaüstünden çıkış yap, `Ctrl+Alt+F3` ile metin ekranına geç ve kendi kullanıcınla gir.
+2. Ev dizinini btrfs alt birimine (subvolume) çevir. Snapshot sadece alt birimlerden alınabiliyor. Dosyalar kopyalanmadan, aynı yerde kalarak taşınır (`--reflink`):
+   ```
+   cd /
+   sudo mv /var/home /var/home.old
+   sudo btrfs subvolume create /var/home
+   sudo chmod 0755 /var/home
+   sudo cp -a --reflink=always /var/home.old/. /var/home/
+   ```
+3. snapper'ı ayarla (`<kullanıcı>` yerine kendi kullanıcı adını yaz):
+   ```
+   sudo snapper -c home create-config /var/home
+   sudo snapper -c home set-config TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes \
+     TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2 \
+     TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0 \
+     ALLOW_USERS=<kullanıcı> SYNC_ACL=yes
+   ```
+4. Yeniden başlat. Her şey yerindeyse eski kopyayı sil: `sudo rm -rf /var/home.old`
 
 ## İmza doğrulama
 

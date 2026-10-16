@@ -169,7 +169,8 @@ summary() {
     "Bilgisayar adı : $HOSTNAME_VALUE" \
     "Kullanıcı adı  : $USERNAME" \
     "Görünen ad     : ${FULLNAME:-(yok)}" \
-    "Kabuk          : fish"
+    "Kabuk          : fish" \
+    "Snapshot       : ev dizini, günlük (son 3 gün + son 2 hafta)"
   echo
   gum confirm --padding "0 2" --affirmative "Kur" --negative "Baştan başla" "Bilgiler doğru mu?"
 }
@@ -183,6 +184,35 @@ apply_keymap() {
     { grep -q '^FONT=' /etc/vconsole.conf 2>/dev/null || echo "FONT=eurlatgr" >>/etc/vconsole.conf; }
 }
 apply_hostname() { hostnamectl set-hostname "$HOSTNAME_VALUE"; }
+
+# btrfs'te alt birimin (subvolume) kök dizininin inode numarası her zaman 256.
+home_is_subvolume() { [[ "$(stat -c %i /var/home 2>/dev/null)" == 256 ]]; }
+
+# Snapshot sadece btrfs alt birimlerinden alınabiliyor; bootc ise /var/home'u düz bir
+# dizin olarak kuruyor. Kullanıcı oluşturulmadan önce, dizin henüz boşken alt birime
+# çevrilir. btrfs değilse ya da dizin doluysa (beklenmez) dokunulmaz.
+apply_home_subvolume() {
+  [[ "$(findmnt -no FSTYPE -T /var)" == btrfs ]] || return 0
+  home_is_subvolume && return 0
+  if [[ -d /var/home ]]; then
+    [[ -z "$(ls -A /var/home)" ]] || return 0
+    rmdir /var/home
+  fi
+  btrfs subvolume create /var/home && chmod 0755 /var/home
+}
+
+# Ev dizininin otomatik snapshot'ları: son 3 gün ve son 2 hafta. Kullanıcı snapper'ı ve
+# /home/.snapshots'u sudo olmadan kullanabilir.
+apply_snapper() {
+  home_is_subvolume || return 0
+  [[ -e /etc/snapper/configs/home ]] || snapper -c home create-config /var/home
+  snapper -c home set-config \
+    TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes \
+    TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2 \
+    TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0 \
+    ALLOW_USERS="$USERNAME" SYNC_ACL=yes
+}
+
 apply_user() {
   if getent passwd "$USERNAME" >/dev/null; then
     usermod -a -G wheel -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
@@ -216,8 +246,10 @@ apply_all() {
     run_step "Dil" apply_locale &&
     run_step "Klavye" apply_keymap &&
     run_step "Bilgisayar adı" apply_hostname &&
+    run_step "Ev dizini (snapshot için)" apply_home_subvolume &&
     run_step "Kullanıcı" apply_user &&
-    run_step "Şifre" apply_password
+    run_step "Şifre" apply_password &&
+    run_step "Otomatik snapshot" apply_snapper
 }
 
 # --- Ana akış -------------------------------------------------------------------

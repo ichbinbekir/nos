@@ -24,7 +24,7 @@ PACKAGES=(
   ostree
   bubblewrap
   skopeo
-  btrfs-progs
+  btrfs-progs # initramfs.sh'den önce kurulu olmalı (btrfs diskten açılış)
   e2fsprogs
   xfsprogs
   dosfstools
@@ -43,6 +43,8 @@ PACKAGES=(
   vim
   openssh # sshd açılmıyor, sadece istemci olarak kullanılıyor
   man-db
+  htop
+  lm_sensors # Isı sensörleri (htop, KDE Sistem İzleyici; sensors komutu)
   networkmanager
   bluez
   bluez-utils
@@ -89,6 +91,8 @@ PACKAGES=(
   plasma-systemmonitor
   kinfocenter
   plasma-disks
+  snapper # Ev dizininin otomatik snapshot'ları (ayarı nos-firstboot yapıyor)
+  btrfs-assistant # Snapshot'ları ve btrfs'i grafik arayüzden yönetme
 
   # Araçlar
   fish
@@ -130,6 +134,8 @@ systemctl enable \
   systemd-timesyncd.service \
   nos-firstboot.service \
   nos-update.timer \
+  snapper-timeline.timer \
+  snapper-cleanup.timer \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 
