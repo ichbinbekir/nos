@@ -6,10 +6,6 @@
 
 set -xeuo pipefail
 
-# system_files/ içeriği köke kopyalanır.
-cp -avf /ctx/system_files/. /
-chmod 0440 /etc/sudoers.d/10-wheel
-
 # Resmi Arch Docker imajı yer kazanmak için man sayfalarını, belgeleri ve çevirileri
 # kurmuyor (pacman.conf sonundaki NoExtract satırları). Normal bir Arch kurulumundaki
 # gibi olsun diye bu satırlar silinir ve önceden kurulu paketler, eksik dosyaları
@@ -108,22 +104,21 @@ pacman -S --noconfirm --needed "${PACKAGES[@]}"
 # AUR paketleri (aur.sh tarafından derlendi). Bağımlılıkları depolardan gelir.
 find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U --noconfirm
 
+# system_files/ köke kopyalanır. Paketlerden sonra yapılır ki bir paketin kendi dosyasının
+# yerine koyduğumuz ayarlar (ör. /etc/environment) paket kurulumunda ezilmesin.
+# Sabit içerikli ayarlar burada değil, system_files'ta düz dosya olarak durur; bu betikte
+# sadece üretilmesi ya da bir paket dosyasında küçük bir değişiklik gereken ayarlar var.
+cp -avf /ctx/system_files/. /
+# git dosya izinlerini taşımıyor; sudo bu izin olmadan dosyayı okumaz.
+chmod 0440 /etc/sudoers.d/10-wheel
+
 # Yerel ayarlar. Hangisinin kullanılacağı ilk açılışta nos-firstboot ile seçilir.
 sed -i -e 's/^#\(en_US.UTF-8 UTF-8\)/\1/' -e 's/^#\(tr_TR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
 locale-gen
 
-# machine-id "uninitialized" olunca sistem ilk açılışı algılar. İlk kurulum soruları
-# (saat dilimi, dil, klavye, bilgisayar adı, kullanıcı) nos-firstboot'ta (system_files);
-# aynı işi yarım yapan systemd-firstboot kapatılır. root hesabı kilitli kalır.
-echo "uninitialized" >/etc/machine-id
+# İlk açılış: system_files/etc/machine-id "uninitialized" olduğu için sistem ilk açılışı
+# algılar; soruları nos-firstboot soruyor. Aynı işi yarım yapan systemd-firstboot kapatılır.
 systemctl mask systemd-firstboot.service
-
-# Metin ekranı yazı tipi: varsayılan yazı tipinde ğ, ş, ı, İ yok.
-echo "FONT=eurlatgr" >>/etc/vconsole.conf
-
-# Varsayılan editör vim (git commit, sudoedit, crontab -e vb.). /etc/environment her
-# girişte (masaüstü, metin ekranı) pam_env ile okunur; kabuktan bağımsız, fish için de geçerli.
-printf 'EDITOR=vim\nVISUAL=vim\n' >>/etc/environment
 
 systemctl enable \
   sddm.service \

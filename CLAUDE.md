@@ -59,6 +59,7 @@ Yapı iki kaynaktan birleştirildi:
 ## Teknik notlar
 
 - Paket adlarını Arch'ta doğrula: `https://archlinux.org/packages/search/json/?name=<paket>`. Fedora adları farklı olabiliyor (ör. `kde-connect` → `kdeconnect`, `kwrite` → `kate` paketinin içinde).
+- **Ayar dosyaları nereye:** Sabit içerikli her ayar `system_files/`'a düz dosya olarak konur (ör. `/etc/environment`, `/etc/vconsole.conf`, `/etc/machine-id`). `build.sh`'de `echo`/`printf` ile dosya yazılmaz; orada sadece içeriği üretilen (`os-release`'teki tarih, ufw kuralları) ya da bir paket dosyasında küçük bir değişiklik gereken (`sed` ile `pacman.conf`, `locale.gen`, `ufw.conf`) ayarlar kalır. `system_files` paket kurulumundan **sonra** kopyalanıyor; bu yüzden bir paketin dosyasının yerine konan dosya ezilmez. Git dosya izinlerini taşımadığı için izin gerektiren dosyalar (sudoers) kopyalamadan sonra `chmod` alır.
 - **AUR paketi eklemek:** `aur.sh`'deki `AUR_PACKAGES` listesine ekle. PGP anahtarları `.SRCINFO`'daki `validpgpkeys`'ten otomatik alınıyor.
 - **`/opt` imajın içinde gerçek bir dizin.** bootcrew onu `/var/opt`'a yönlendiriyordu; AUR paketleri (Helium) `/opt`'a kurulduğu için değiştirildi.
 - **NoExtract:** Resmi Arch Docker imajı man sayfalarını, belgeleri ve çevirileri kurmuyor (`pacman.conf` sonundaki `NoExtract` satırları). `build.sh` bu satırların hepsini siler ve önceden kurulu paketleri yeniden kurar; sonuç normal bir Arch kurulumu gibi olur. Bunu kaldırma, yoksa Türkçe arayüz, klavye ve man sayfaları çalışmaz.

@@ -1,0 +1,10 @@
+#
+# This file is parsed by pam_env module
+#
+# Syntax: simple "KEY=VAL" pairs on separate lines
+#
+
+# nos: Varsayılan editör vim (git commit, sudoedit, crontab -e vb.). Bu dosya her
+# girişte (masaüstü, metin ekranı) okunur; kabuktan bağımsız, fish için de geçerli.
+EDITOR=vim
+VISUAL=vim
