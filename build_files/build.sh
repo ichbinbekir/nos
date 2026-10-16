@@ -44,6 +44,7 @@ PACKAGES=(
   # Sistem
   sudo
   git
+  vim
   openssh # sshd açılmıyor, sadece istemci olarak kullanılıyor
   man-db
   networkmanager
@@ -119,6 +120,10 @@ systemctl mask systemd-firstboot.service
 
 # Metin ekranı yazı tipi: varsayılan yazı tipinde ğ, ş, ı, İ yok.
 echo "FONT=eurlatgr" >>/etc/vconsole.conf
+
+# Varsayılan editör vim (git commit, sudoedit, crontab -e vb.). /etc/environment her
+# girişte (masaüstü, metin ekranı) pam_env ile okunur; kabuktan bağımsız, fish için de geçerli.
+printf 'EDITOR=vim\nVISUAL=vim\n' >>/etc/environment
 
 systemctl enable \
   sddm.service \

@@ -14,7 +14,7 @@ Arch Linux tabanlı, KDE Plasma'lı kişisel bir bootc imajı. Kullanıcıya yö
 
 **En temel amaç: sahibinin önüne açınca çalışan, rahat kullanılan, hafif bir makine getirmek.** Aşağıdaki kurallar bu amaca hizmet eder; çeliştiklerinde "çalışır ve rahat" önce gelir.
 
-1. **Hafif ama aşırı sıkı değil.** Masaüstü ve uygulamalar sadece kullanılanlardan oluşur; bir uygulama eklemeden önce Flatpak ya da Distrobox ile daha hafif bir yolu var mı düşünülür. Ama Linux'ta normalde bulunan, arada bir gerekebilecek genel araçlar (git, openssh, bluez-utils, man sayfaları, dosya sistemi araçları) kesilmez.
+1. **Hafif ama aşırı sıkı değil.** Masaüstü ve uygulamalar sadece kullanılanlardan oluşur; bir uygulama eklemeden önce Flatpak ya da Distrobox ile daha hafif bir yolu var mı düşünülür. Ama Linux'ta normalde bulunan, arada bir gerekebilecek genel araçlar (git, vim, openssh, bluez-utils, man sayfaları, dosya sistemi araçları) kesilmez.
 2. **Sahibinin donanımı: Intel işlemci, NVIDIA ekran kartı.** Açıkça başka bir donanıma özel olan paketler (adında `amd`, `radeon` vb. geçen; ör. `amd-ucode`) eklenmez. Ama eksik çıkmasın diye `linux-firmware` bütün olarak kurulur; firmware'i üreticilere bölmeye uğraşılmaz.
 3. **Tek tarayıcı Helium** (AUR, imajın içinde). Başka tarayıcı eklenmez.
 4. **Güvenlik duvarı ufw.** firewalld kullanılmıyor; sahibi için ufw daha anlaşılır.
