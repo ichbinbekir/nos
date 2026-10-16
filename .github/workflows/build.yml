@@ -5,7 +5,14 @@ on:
     branches:
       - master
     paths-ignore:
+      # İmajın içeriğini değiştirmeyen dosyalar
       - '**.md'
+      - 'docs/**'
+      - 'tools/**'
+      - 'LICENSE'
+      - 'cosign.pub'
+      - '.gitignore'
+      - '.gitattributes'
       # Sadece bootc imajını ilgilendiren dosyalar; onları build-bootc.yml build eder.
       # İki workflow birbirinden bağımsız: yeni bootc bir sonraki build'de (04:00 ya da elle) alınır.
       - 'build_files/bootc/build-bootc.sh'
@@ -14,6 +21,10 @@ on:
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'tools/**'
   # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
   schedule:
     - cron: '0 4 * * *'

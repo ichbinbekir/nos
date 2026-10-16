@@ -4,6 +4,8 @@ Arch Linux tabanlı, KDE Plasma masaüstüne sahip, **kişisel** bir [bootc](htt
 
 Sistem bir container imajı olarak GitHub'da build ediliyor ve bilgisayara bu imajdan kuruluyor. Güncellemeler imajın tamamı değiştirilerek geliyor; bir güncelleme sorun çıkarırsa önceki sürüme tek komutla dönülebiliyor.
 
+![nos'ta fastfetch: mavi NOS tüpü logosu ve sistem bilgileri](docs/screenshot.png)
+
 ## Amaç
 
 En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bunun için iki kural var:
