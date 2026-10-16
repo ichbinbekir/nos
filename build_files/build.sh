@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # İmajın asıl içeriği: paketler, servisler ve ayarlar.
-# Kurallar (bkz. README.md ve CLAUDE.md): Hafif ve sahibinin donanımına (Intel işlemci,
-# NVIDIA ekran kartı) yönelik. Başka donanıma özel paketler (ör. amd-ucode) eklenmez;
+# Kurallar (bkz. README.md ve CLAUDE.md): Hafif ve sahibinin donanımına (Acer Nitro 16: Intel i7-13620H,
+# NVIDIA RTX 4050) yönelik. Başka donanıma özel paketler (ör. amd-ucode) eklenmez;
 # Linux'ta normalde bulunan genel araçlar ise kalır.
 
 set -xeuo pipefail
@@ -43,6 +43,7 @@ PACKAGES=(
   switcheroo-control # KDE'de sağ tık > "Ayrık grafik kartıyla çalıştır"
   vulkan-intel # Intel için Vulkan
   intel-media-driver # Intel ile donanımsal video çözme (VA-API; Broadwell ve sonrası)
+  zram-generator # Sıkıştırılmış RAM takası (ayarı system_files'ta)
 
   # Sistem
   sudo
@@ -138,6 +139,7 @@ systemctl enable \
   ufw.service \
   power-profiles-daemon.service \
   switcheroo-control.service \
+  nvidia-powerd.service \
   systemd-resolved.service \
   systemd-timesyncd.service \
   nos-firstboot.service \

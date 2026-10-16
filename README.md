@@ -9,7 +9,7 @@ Sistem bir container imajı olarak GitHub'da build ediliyor ve bilgisayara bu im
 En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bunun için iki kural var:
 
 1. **Hafif.** Masaüstü ve uygulamalar sadece gerçekten kullanılanlardan oluşuyor; Arch isteğe bağlı bağımlılıkları kendiliğinden kurmadığı için gereksiz paket gelmiyor. Ama aşırıya da kaçılmıyor: git, ssh, man sayfaları gibi Linux'ta normalde bulunan ve arada bir gerekebilecek araçlar yerinde.
-2. **Sadece bu projenin sahibine yönelik.** İmaj tek bir bilgisayar ve tek bir kullanıcı için hazırlanıyor: **Intel işlemci** ve **NVIDIA ekran kartı**. Açıkça başka bir donanıma özel olan paketler kurulmuyor.
+2. **Sadece bu projenin sahibine yönelik.** İmaj tek bir bilgisayar ve tek bir kullanıcı için hazırlanıyor: **Acer Nitro 16** dizüstü, **Intel Core i7-13620H** işlemci (tümleşik Intel grafikle), **NVIDIA RTX 4050** ekran kartı, 16 GB RAM. Açıkça başka bir donanıma özel olan paketler kurulmuyor.
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
