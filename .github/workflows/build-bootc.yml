@@ -9,7 +9,8 @@ name: Build bootc
 # - Pazartesileri sürüm aynı olsa da yeniden derlenir: Arch kütüphaneleri değiştikçe bootc
 #   en fazla bir haftalık kalsın.
 # - bootc derleme dosyaları değişince ve elle tetiklenince her zaman derlenir.
-# Push ya da elle tetiklenen bir derlemeden sonra ana build kendiliğinden çalışır.
+# Ana build'i tetiklemez; iki workflow bağımsız. Yeni bootc, ana build'in bir sonraki
+# çalışmasında (04:00 ya da elle) alınır.
 
 on:
   push:
