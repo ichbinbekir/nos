@@ -90,7 +90,7 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 
 ### Ev dizini snapshot'ları
 
-Ev dizininin (`/home`; dosyalar ve `~/.config` içindeki bütün ayarlar) btrfs snapshot'ı [snapper](http://snapper.io/) ile otomatik alınıyor: son 3 gün ve son 2 hafta saklanıyor, eskileri kendiliğinden siliniyor. Yanlışlıkla silinen bir dosyayı ya da bozulan bir ayarı geri almak için:
+Ev dizininin (`/home`; dosyalar ve `~/.config` içindeki bütün ayarlar) btrfs snapshot'ı [snapper](http://snapper.io/) ile günde bir otomatik alınıyor (bilgisayar o an kapalıysa açılışta): son 3 gün ve son 2 hafta saklanıyor, eskileri kendiliğinden siliniyor. Yanlışlıkla silinen bir dosyayı ya da bozulan bir ayarı geri almak için:
 
 - **Btrfs Assistant** uygulamasından (menüde): Snapper sekmesinde snapshot'ları listeler, farkları gösterir, geri yükler.
 - Ya da dosya yöneticisinde `/home/.snapshots/<numara>/snapshot/` içinden eski kopyayı alarak.
