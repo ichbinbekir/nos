@@ -28,6 +28,7 @@ PACKAGES=(
   e2fsprogs
   xfsprogs
   dosfstools
+  ntfs-3g # Windows bölümleri ve NTFS diskler
   dbus
   dbus-glib
   glib2
@@ -52,6 +53,7 @@ PACKAGES=(
   openssh # sshd açılmıyor, sadece istemci olarak kullanılıyor
   man-db
   htop
+  unzip
   lm_sensors # Isı sensörleri (htop, KDE Sistem İzleyici; sensors komutu)
   networkmanager
   bluez
@@ -99,6 +101,7 @@ PACKAGES=(
   plasma-systemmonitor
   kinfocenter
   plasma-disks
+  plasma-firewall # Sistem Ayarları'nda ufw sayfası
   snapper # Ev dizininin otomatik snapshot'ları (ayarı nos-firstboot yapıyor)
   btrfs-assistant # Snapshot'ları ve btrfs'i grafik arayüzden yönetme
 
