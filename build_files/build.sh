@@ -147,6 +147,7 @@ systemctl enable \
   systemd-timesyncd.service \
   nos-firstboot.service \
   nos-update.timer \
+  fstrim.timer \
   snapper-timeline.timer \
   snapper-cleanup.timer \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
