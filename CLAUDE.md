@@ -8,7 +8,9 @@ Arch Linux tabanlı, KDE Plasma'lı kişisel bir bootc imajı. Kullanıcıya yö
 - Kararları Claude verir ve kısaca, teknik olmayan bir dille açıklar. Sadece gerçekten sahibine ait kararlar için soru sorar (ör. donanımı hakkında bilinmeyen bir bilgi, bir uygulamayı isteyip istemediği).
 - İstek kurallarla çelişiyorsa (ör. ağır bir paket, donanıma uymayan bir şey) bunu söyleyip daha hafif bir alternatif önerir.
 - README.md'yi güncel tut: Başka kullanıcıların bilmesi gerekenler (amaç, donanım, kurulum, kullanım) orada. CLAUDE.md'ye sadece projede çalışan AI'ın bilmesi gerekenler yazılır.
-- Bütün imajı yerelde build edip test etme; doğrulama GitHub Actions'ta yapılıyor. Paket adı gibi küçük kontroller web API'leriyle yapılabilir.
+- Bütün imajı yerelde build edip test etme; doğrulama GitHub Actions'ta yapılıyor. Paket adı gibi küçük kontroller web API'leriyle yapılabilir. Sahibi bir kez yerel tam test sırasında durdurup container'ı sildirdi.
+- **Push'u sadece sahibi söyleyince yap.** Değişiklikleri istediğin zaman commit'le ve "commit'lendi, push bekliyor" de. Her push build başlatıyor (~10 dk); sahibi değişiklikleri biriktirip ne zaman build olacağına kendisi karar veriyor. İmajı değiştirmeyen bir push için `[skip ci]` önerilebilir.
+- Sahibi Türkçe yazıyor; cevaplar Türkçe, sade, teknik terimsiz.
 
 ## Temel kurallar
 
