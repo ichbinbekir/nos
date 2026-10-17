@@ -40,6 +40,11 @@ RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
     bash /ctx/bootc/initramfs.sh
 
+# Sürüm (build tarihi) os-release'e initramfs üretildikten SONRA eklenir. bootc açılış
+# menüsündeki adı buradan alıyor ("nos 20261017"); dracut ise os-release'i initrd'ye
+# kopyalıyor, tarih daha önce yazılırsa ~140 MB'lık initrd her gün değişir.
+RUN echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
+
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sed -i 's|^HOME=.*|HOME=/var/home|' "/etc/default/useradd" && \
     bash /ctx/bootc/bootc-rootfs.sh

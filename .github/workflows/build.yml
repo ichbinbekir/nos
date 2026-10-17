@@ -78,12 +78,18 @@ jobs:
       - name: Rechunk image
         run: just rechunk
 
+      # Etiketler: latest (sistemlerin takip ettiği) ve YYYYMMDD (eski bir güne dönmek için).
+      # podman, yeni parçaları ilk yüklediğinde katman bilgilerini eksik gönderiyor; ilk push
+      # ile sonrakilerin kimliği (digest) farklı çıkıyor (podman#27796, bootcrew de aynısını
+      # yapıyor). Bu yüzden önce latest iki kez yüklenir, sonra tarih etiketi; hepsi aynı
+      # kimliği taşır ve imza o kimliğe atılır.
       - name: Push image
         if: github.event_name != 'pull_request'
         run: |
           set -euxo pipefail
-          for tag in latest "$(date -u +%Y%m%d)" "${GITHUB_SHA::7}"; do
+          for tag in latest latest "$(date -u +%Y%m%d)"; do
             podman push --digestfile=/tmp/digestfile "$IMAGE_NAME:latest" "$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
+            echo "$tag -> $(< /tmp/digestfile)"
           done
           echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
 
@@ -102,3 +108,15 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$IMAGE_NAME@$DIGEST"
+
+      # Eski imajları sil: her build bir imaj ve bir imza (.sig) kaydı bırakıyor. Son 30
+      # kayıt (~15 gün) tutulur; o günlere `bootc switch ghcr.io/<sahip>/nos:YYYYMMDD` ile
+      # dönülebilir. Silme başarısız olursa build başarısız sayılmaz.
+      - name: Delete old images
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          package-type: container
+          min-versions-to-keep: 30

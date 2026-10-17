@@ -81,6 +81,7 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 |---|---|
 | Güncelle (yeniden başlatınca uygulanır) | `sudo bootc upgrade` |
 | Önceki sürüme dön | `sudo bootc rollback` |
+| Belirli bir günün sürümüne geç (son ~15 gün) | `sudo bootc switch ghcr.io/ichbinbekir/nos:YYYYMMDD` (geri: `...nos:latest`) |
 | Hangi sürümdeyim | `sudo bootc status` |
 | Güncelleme var mı (indirmeden) | `sudo bootc upgrade --check` |
 | Otomatik güncellemeyi bu oturumda durdur | `sudo systemctl stop nos-update.timer` |
