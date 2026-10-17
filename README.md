@@ -150,6 +150,8 @@ Snapshot ayarını ilk kurulum ekranı yapıyor; `switch` ile gelen sistemlerde 
 cosign verify --key cosign.pub ghcr.io/ichbinbekir/nos:latest
 ```
 
+Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `ghcr.io/ichbinbekir/nos` imajı bu anahtarla imzalı değilse güncelleme reddedilir (`/etc/containers/policy.json`). Diğer imajlar (Distrobox, podman) bundan etkilenmez.
+
 ## Lisans
 
 [MIT](LICENSE). İstisnalar: [build_files/bootc/](build_files/bootc/) ve Justfile'daki `rechunk` tarifi, alındıkları projelerin lisansı olan Apache-2.0 ile kalıyor.
