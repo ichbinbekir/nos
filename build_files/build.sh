@@ -66,6 +66,7 @@ PACKAGES=(
   pipewire-alsa
   pipewire-jack
   wireplumber
+  sof-firmware # Intel dahili ses kartı (Sound Open Firmware); bu olmadan ses çalışmıyor
   noto-fonts
   noto-fonts-emoji
 
