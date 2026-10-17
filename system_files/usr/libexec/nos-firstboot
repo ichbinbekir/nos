@@ -188,19 +188,42 @@ apply_hostname() { hostnamectl set-hostname "$HOSTNAME_VALUE"; }
 # Açılış menüsü 5 saniye görünsün (Windows'u ya da önceki nos sürümünü seçebilmek için).
 # bootc "timeout 5" yazmak istiyor ama sadece loader.conf yoksa; kurulumda systemd-boot
 # önce satırları kapalı (#) bir loader.conf oluşturduğu için menü hiç görünmüyor.
-# bootc bu dosyaya sonra dokunmuyor. EFI bölümü salt okunur bağlıysa geçici olarak açılır.
+# bootc bu dosyaya sonra dokunmuyor.
+# EFI bölümü bootc'nin seçtiği gibi bulunur: sistem diskindeki ilk EFI bölümü. /boot'un
+# bağlı olduğu varsayılmaz: bölüm bir yere bağlıysa orası kullanılır (salt okunursa geçici
+# olarak yazılabilir yapılır), değilse /run altında geçici olarak bağlanır.
+ESP_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
 apply_bootmenu() {
-  local conf=/boot/loader/loader.conf ro=0
-  [[ -f "$conf" ]] || return 0
-  grep -q '^timeout' "$conf" && return 0
-  if findmnt -no OPTIONS /boot | tr ',' '\n' | grep -qx ro; then
-    ro=1
-    mount -o remount,rw /boot || return 1
+  local root_dev disk esp mnt="" tmp="" ro=0 rc=0 conf
+  root_dev=$(findmnt -no SOURCE /sysroot | sed 's/\[.*//')
+  disk=$(lsblk -no PKNAME "$root_dev" | head -n1)
+  [[ -n "$disk" ]] || return 0
+  esp=$(lsblk -lnpo PATH,PARTTYPE "/dev/$disk" | awk -v t="$ESP_TYPE" 'tolower($2) == t { print $1; exit }')
+  [[ -n "$esp" ]] || return 0
+
+  mnt=$(findmnt -no TARGET -S "$esp" | head -n1)
+  if [[ -n "$mnt" ]]; then
+    if findmnt -no OPTIONS -T "$mnt" | tr ',' '\n' | grep -qx ro; then
+      ro=1
+      mount -o remount,rw "$mnt" || return 1
+    fi
+  else
+    tmp=$(mktemp -d /run/nos-esp.XXXXXX)
+    mount "$esp" "$tmp" || { rmdir "$tmp"; return 1; }
+    mnt="$tmp"
   fi
-  local rc=0
-  { printf 'timeout 5\n'; grep -v '^#\?timeout' "$conf"; } >"$conf.new" &&
-    mv "$conf.new" "$conf" || rc=1
-  ((ro)) && mount -o remount,ro /boot
+
+  conf="$mnt/loader/loader.conf"
+  if [[ -f "$conf" ]] && ! grep -q '^timeout' "$conf"; then
+    { printf 'timeout 5\n'; grep -v '^#\?timeout' "$conf"; } >"$conf.new" &&
+      mv "$conf.new" "$conf" || rc=1
+  fi
+
+  if [[ -n "$tmp" ]]; then
+    umount "$tmp" && rmdir "$tmp"
+  elif ((ro)); then
+    mount -o remount,ro "$mnt"
+  fi
   return $rc
 }
 
