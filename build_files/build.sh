@@ -189,3 +189,19 @@ ln -sf ../default.xml /etc/libvirt/qemu/networks/autostart/default.xml
 # NoExtract kaldırılıp paketler yeniden kurulunca pacman, Docker imajının kendi
 # ayarlarını korumak için yeni sürümleri .pacnew olarak bırakıyor; gerekmiyorlar.
 find /etc -name '*.pacnew' -delete
+
+# /var imaja girmiyor: bootc-rootfs.sh boşaltıyor, bootc da kurulu sistemlerde /var'a
+# dokunmuyor. Paketlerin /var altına koyduğu klasörler (ör. /var/lib/libvirt,
+# /var/log/swtpm) bu yüzden kurulu sistemde yoktu; libvirt bu yüzden açılmıyordu.
+# Fedora'da rpm-ostree bunu kendiliğinden yapıyor, burada elle: her klasör sahibi ve
+# izniyle tmpfiles.d satırına çevrilir, açılışta systemd-tmpfiles eksikleri oluşturur.
+# Zaten bir tmpfiles.d satırı olan yollar ve pacman'ın kendi klasörleri atlanır.
+declared="$(systemd-tmpfiles --cat-config 2>/dev/null | awk '$1 !~ /^#/ && NF >= 2 {print $2}' | sort -u)"
+find /var -mindepth 1 -type d \
+  ! -path '/var/lib/pacman*' ! -path '/var/cache/pacman*' ! -path '/var/log/journal*' ! -path '/var/tmp*' \
+  -printf '%p %m %u %g\n' | sort |
+  while read -r path mode user group; do
+    grep -qxF "$path" <<<"$declared" && continue
+    printf 'd %s %04o %s %s -\n' "$path" "0$mode" "$user" "$group"
+  done > /usr/lib/tmpfiles.d/nos-var.conf
+cat /usr/lib/tmpfiles.d/nos-var.conf
