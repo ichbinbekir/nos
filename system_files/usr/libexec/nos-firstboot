@@ -9,6 +9,7 @@
 # açılışta ekran yeniden gelir.
 #
 # root hesabı kilitli kalır; oluşturulan kullanıcı wheel grubunda, sudo kullanabilir.
+# libvirt grubunda: sanal makineleri (virt-manager) şifre sormadan yönetebilir.
 
 set -uo pipefail
 
@@ -257,9 +258,9 @@ apply_snapper() {
 
 apply_user() {
   if getent passwd "$USERNAME" >/dev/null; then
-    usermod -a -G wheel -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+    usermod -a -G wheel,libvirt -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
   else
-    useradd -m -G wheel -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+    useradd -m -G wheel,libvirt -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
   fi
 }
 apply_password() { printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; }

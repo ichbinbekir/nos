@@ -98,7 +98,6 @@ PACKAGES=(
   flatpak-kcm
   discover
   kate # kwrite bu pakette
-  gwenview
   kdeconnect
   plasma-systemmonitor
   kinfocenter
@@ -116,6 +115,8 @@ PACKAGES=(
   gum # İlk kurulum ekranının (nos-firstboot) arayüzü
 
   # Sanallaştırma (QEMU/KVM)
+  qemu-desktop # Sanal makineyi çalıştıran program; ekran (SPICE), ses, USB aktarma desteğiyle. qemu-base'de ekran desteği yok, virt-manager'la ekran açılmaz
+  libvirt # Sanal makineleri ve ağlarını yöneten servis. Arayüzü virt-manager (Flatpak) buna bağlanır
   dnsmasq # Sanal makinelerin ağı (libvirt NAT ağı DHCP/DNS için kullanıyor)
   edk2-ovmf # Sanal makinede UEFI açılış (nos imajını denemek için şart)
   swtpm # Sanal TPM (Windows 11 için)
@@ -157,6 +158,7 @@ systemctl enable \
   fstrim.timer \
   snapper-timeline.timer \
   snapper-cleanup.timer \
+  libvirtd.socket \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 
@@ -167,12 +169,22 @@ ufw default deny incoming
 ufw default allow outgoing
 ufw allow 1714:1764/tcp comment 'KDE Connect'
 ufw allow 1714:1764/udp comment 'KDE Connect'
+# Sanal makinelerin ağı (libvirt'in "default" NAT ağı, virbr0): gelen kapalı olduğu için
+# sanal makineler bilgisayardaki dnsmasq'tan IP (DHCP) ve DNS alamıyordu; ufw yönlendirmeyi
+# de varsayılan olarak engellediği için internete çıkamıyorlardı. Sadece virbr0'a izin verilir.
+ufw allow in on virbr0 comment 'libvirt: DHCP/DNS'
+ufw route allow in on virbr0 comment 'libvirt: sanal makine -> internet'
+ufw route allow out on virbr0 comment 'libvirt: internet -> sanal makine'
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
 
 # Sistem adı (system_files/usr/lib/os-release): /etc/os-release ona bağlantı olmalı;
 # Arch Docker imajı onu düz dosyaya çeviriyor. Git ve Windows sembolik bağlantıları
 # güvenilir taşımadığı için bağlantı burada oluşturulur.
 ln -sf ../usr/lib/os-release /etc/os-release
+
+# libvirt'in hazır "default" NAT ağı (paketle gelen tanım) servis başlayınca kendiliğinden
+# açılsın; sanal makineler ek ayar yapmadan internete çıkar (virsh net-autostart default).
+ln -sf ../default.xml /etc/libvirt/qemu/networks/autostart/default.xml
 
 # NoExtract kaldırılıp paketler yeniden kurulunca pacman, Docker imajının kendi
 # ayarlarını korumak için yeni sürümleri .pacnew olarak bırakıyor; gerekmiyorlar.
