@@ -114,6 +114,11 @@ PACKAGES=(
   podman
   python
   gum # İlk kurulum ekranının (nos-firstboot) arayüzü
+
+  # Sanallaştırma (QEMU/KVM)
+  dnsmasq # Sanal makinelerin ağı (libvirt NAT ağı DHCP/DNS için kullanıyor)
+  edk2-ovmf # Sanal makinede UEFI açılış (nos imajını denemek için şart)
+  swtpm # Sanal TPM (Windows 11 için)
 )
 
 pacman -S --noconfirm --needed "${PACKAGES[@]}"
