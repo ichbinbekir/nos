@@ -101,6 +101,8 @@ sudo umount /run/esp
 
 İmajda SSH sunucusu açık değil; `ssh` sadece başka makinelere bağlanmak için var.
 
+Gece ışığı açıkken tarayıcıda ya da VS Code gibi uygulamalarda renkler gidip geliyorsa: Sistem Ayarları → Ekran'da renk doğruluğu/verimlilik seçeneğini "renk doğruluğu"na al. Ayar kullanıcıya ve ekrana özel; her yeni kullanıcı ve yeni ekran için bir kez yapılır.
+
 ### Ev dizini snapshot'ları
 
 Ev dizininin (`/home`; dosyalar ve `~/.config` içindeki bütün ayarlar) btrfs snapshot'ı [snapper](http://snapper.io/) ile günde bir otomatik alınıyor (bilgisayar o an kapalıysa açılışta): son 3 gün ve son 2 hafta saklanıyor, eskileri kendiliğinden siliniyor. Yanlışlıkla silinen bir dosyayı ya da bozulan bir ayarı geri almak için:
