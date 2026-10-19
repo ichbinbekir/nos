@@ -195,8 +195,10 @@ find /etc -name '*.pacnew' -delete
 # /var/log/swtpm) bu yüzden kurulu sistemde yoktu; libvirt bu yüzden açılmıyordu.
 # Fedora'da rpm-ostree bunu kendiliğinden yapıyor, burada elle: her klasör sahibi ve
 # izniyle tmpfiles.d satırına çevrilir, açılışta systemd-tmpfiles eksikleri oluşturur.
-# Zaten bir tmpfiles.d satırı olan yollar ve pacman'ın kendi klasörleri atlanır.
-declared="$(systemd-tmpfiles --cat-config 2>/dev/null | awk '$1 !~ /^#/ && NF >= 2 {print $2}' | sort -u)"
+# Zaten klasörü oluşturan bir tmpfiles.d satırı (d, D, v, q, Q, C, L) olan yollar ve
+# pacman'ın kendi klasörleri atlanır. Sadece izin düzelten satırlar (z, Z; ör. swtpm'in
+# /var/lib/swtpm-localca'sı) klasörü oluşturmadığı için onlar sayılmaz.
+declared="$(systemd-tmpfiles --cat-config 2>/dev/null | awk '$1 ~ /^[dDvqQCL]/ && NF >= 2 {print $2}' | sort -u)"
 find /var -mindepth 1 -type d \
   ! -path '/var/lib/pacman*' ! -path '/var/cache/pacman*' ! -path '/var/log/journal*' ! -path '/var/tmp*' \
   -printf '%p %m %u %g\n' | sort |
