@@ -9,6 +9,7 @@ Arch Linux tabanlı, KDE Plasma'lı kişisel bir bootc imajı. Kullanıcıya yö
 - İstek kurallarla çelişiyorsa (ör. ağır bir paket, donanıma uymayan bir şey) bunu söyleyip daha hafif bir alternatif önerir.
 - README.md'yi güncel tut: Başka kullanıcıların bilmesi gerekenler (amaç, donanım, kurulum, kullanım) orada. CLAUDE.md'ye sadece projede çalışan AI'ın bilmesi gerekenler yazılır.
 - Bütün imajı yerelde build edip test etme; doğrulama GitHub Actions'ta yapılıyor. Paket adı gibi küçük kontroller web API'leriyle yapılabilir. Sahibi bir kez yerel tam test sırasında durdurup container'ı sildirdi.
+- **Mevcut kuruluma özel tek seferlik kod projeye eklenmez.** Projede sadece sıfırdan kuran herkes için geçerli olan şeyler durur. Sahibinin şu anki sistemine bir kez uygulanacak bir düzeltme gerekiyorsa (eski durumu çeviren betik, "zaten yoksa ekle" türü geçiş kodu vb.) komutlar sohbette yazılır, sahibi elle çalıştırır. bootc'nin kendi standart mekanizmaları (kargs.d, `/etc` birleştirmesi gibi güncellemede kendiliğinden uygulananlar) buna girmez.
 - **Push'u sadece sahibi söyleyince yap.** Değişiklikleri istediğin zaman commit'le ve "commit'lendi, push bekliyor" de. Her push build başlatıyor (~10 dk); sahibi değişiklikleri biriktirip ne zaman build olacağına kendisi karar veriyor. İmajı değiştirmeyen bir push için `[skip ci]` önerilebilir.
 - Sahibi Türkçe yazıyor; cevaplar Türkçe, sade, teknik terimsiz.
 
