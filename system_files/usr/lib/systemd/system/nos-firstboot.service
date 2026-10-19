@@ -1,11 +1,13 @@
 [Unit]
 Description=nos ilk kurulum (saat dilimi, dil, klavye, bilgisayar adı, kullanıcı)
-After=systemd-vconsole-setup.service systemd-user-sessions.service dbus.service
+After=systemd-vconsole-setup.service systemd-user-sessions.service dbus.service plymouth-quit.service
 Before=display-manager.service getty@tty1.service
 ConditionPathExists=!/var/lib/nos/firstboot-done
 
 [Service]
 Type=oneshot
+# Açılış animasyonu (plymouth) ekranı tutuyorsa kapat; yoksa tty1'deki kurulum görünmez.
+ExecStartPre=-/usr/bin/plymouth quit
 ExecStart=/usr/bin/bash /usr/libexec/nos-firstboot
 # Betik beklenmedik şekilde kapanırsa giriş ekranına geçmeden yeniden başlat.
 Restart=on-failure

@@ -45,6 +45,7 @@ PACKAGES=(
   vulkan-intel # Intel için Vulkan
   intel-media-driver # Intel ile donanımsal video çözme (VA-API; Broadwell ve sonrası)
   zram-generator # Sıkıştırılmış RAM takası (ayarı system_files'ta)
+  plymouth # Açılışta yazılar yerine sade animasyon (bgrt teması: üretici logosu + dönen simge). initramfs.sh'den önce kurulu olmalı
 
   # Sistem
   sudo

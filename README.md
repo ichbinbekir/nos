@@ -91,6 +91,8 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 
 İmaj her gün otomatik olarak yeniden build ediliyor; Arch paketlerindeki güncellemeler bu yolla geliyor. Sistem de güncellemeleri kendisi kontrol ediyor (açılıştan 10 dakika sonra, sonra her 6 saatte bir): yeni sürümü arka planda indirip hazırlıyor, bilgisayarı yeniden başlatmıyor. Hazırlanan sürüm bir sonraki açılışta devreye giriyor. Elle `sudo bootc upgrade` yapmak gerekmiyor; hemen kontrol etmek istersen kullanabilirsin.
 
+Açılış yazılar yerine sade bir animasyonla geçer; yazıları görmek için açılırken Esc'ye bas.
+
 Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini ilk kurulum ekranı ayarlıyor. `bootc switch` ile gelen sistemlerde menü görünmüyorsa EFI bölümünü (`lsblk -f`'te `vfat` olan, ör. `/dev/sda2`) geçici olarak bağlayıp ayarı yaz:
 
 ```

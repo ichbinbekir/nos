@@ -1,0 +1,3 @@
+# nos: Açılışta çekirdek ve systemd yazıları yerine plymouth animasyonu.
+# Açılış sırasında Esc'ye basınca yazılar görünür.
+kargs = ["quiet", "splash"]
