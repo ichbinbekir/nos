@@ -58,6 +58,7 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
      bootc install to-disk --composefs-backend --bootloader systemd \
        --filesystem btrfs --wipe /dev/nvme0n1
    ```
+   Dosya sistemi btrfs olmalı (`--filesystem btrfs`): imaj diski zstd ile sıkıştırarak kullanıyor, başka bir dosya sistemiyle açılmaz.
 4. Yeniden başlat. İlk açılışta bir kurulum ekranı gelir ve sırayla saat dilimi, sistem dili, klavye düzeni, bilgisayar adı, kullanıcı adı, görünen ad ve şifre sorulur (ok tuşları ve Enter ile). Sonda bir özet gösterilir; "Kur" denmeden sistemde hiçbir şey değişmez. Bitince giriş ekranı açılır. Kullanıcının kabuğu fish olarak ayarlanır.
 
 `root` hesabı kilitli; yönetici işleri için `sudo` kullanılır (ilk açılışta oluşturulan kullanıcı `sudo` kullanabilir).
