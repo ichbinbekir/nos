@@ -9,12 +9,18 @@ ConditionKernelCommandLine=|composefs.digest
 ConditionKernelCommandLine=|composefs
 Wants=network-online.target
 After=network-online.target
+# Başarısız olursa (ör. internet anlık koptu) 15 dk sonra tekrar dener; 2 saatte en fazla
+# 4 deneme, sonra bir sonraki zamanlayıcı çalışmasını bekler.
+StartLimitIntervalSec=2h
+StartLimitBurst=4
 
 [Service]
 Type=oneshot
 # --apply yok: bootc güncellemeyi indirip hazırlar, bilgisayarı yeniden başlatmaz.
 # Hazırlanan sürüm bir sonraki açılışta devreye girer.
 ExecStart=/usr/bin/bootc upgrade --quiet
+Restart=on-failure
+RestartSec=15min
 # Arka planda, masaüstünü yavaşlatmadan çalış.
 Nice=19
 IOSchedulingClass=idle
