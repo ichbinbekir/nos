@@ -81,3 +81,17 @@ jobs:
           for tag in "$VERSION" latest; do
             podman push nos-bootc:latest "$IMAGE:$tag"
           done
+
+      # Etiketsiz kayıtları sil: haftalık yeniden derleme aynı etiketleri (sürüm, latest)
+      # yeni imaja taşıyor, önceki imaj etiketsiz kalıyordu. nos build'i sadece latest'i
+      # kullanıyor; etiketsiz hiçbir kayıt gerekli değil. Silme başarısız olursa build
+      # başarısız sayılmaz.
+      - name: Delete untagged images
+        if: steps.decide.outputs.build == 'true'
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: nos-bootc
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
