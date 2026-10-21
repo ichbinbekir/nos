@@ -109,6 +109,21 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$IMAGE_NAME@$DIGEST"
 
+      # Etiketsiz kayıtları sil: latest'in ilk yüklemesi (podman#27796, yukarıda) ikinci
+      # yüklemeyle etiketini kaybedip sahipsiz kalıyor; her build bir tane bırakıyordu.
+      # İmzalar eski biçimde (.sig etiketi) olduğu ve imaj tek parça (index değil) olduğu
+      # için hiçbir etiketsiz kayıt gerekli değil. Eski imajları silmeden önce çalışır ki
+      # 30 kayıt sınırı sadece imaj ve imzaları saysın.
+      - name: Delete untagged images
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.IMAGE_NAME }}
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
+
       # Eski imajları sil: her build bir imaj ve bir imza (.sig) kaydı bırakıyor. Son 30
       # kayıt (~15 gün) tutulur; o günlere `bootc switch ghcr.io/<sahip>/nos:YYYYMMDD` ile
       # dönülebilir. Silme başarısız olursa build başarısız sayılmaz.
