@@ -6,6 +6,7 @@
 # - SELinux desteği kapalı derleniyor. bootc 1.17'den beri varsayılan olarak
 #   libselinux istiyor; Arch'ın resmi depolarında yok ve Arch SELinux kullanmıyor.
 #   Seçenekler bootc Makefile'ındaki örnekten alındı.
+# - Sonda derleme klasörü ve cargo önbelleği siliniyor (aşağıda).
 
 set -xeuo pipefail
 
@@ -15,3 +16,9 @@ git checkout "$version"
 
 make bin install-all DESTDIR=/output \
   CARGO_OPTIONS='--no-default-features --features "install-to-disk pre-6.15"'
+
+# Derleme artıkları (target/, birkaç GB) bu adımın imaj katmanına girmesin: podman katmanı
+# kaydederken onları bir kez daha yazıyor ve build makinesinin diski doluyordu
+# ("no space left on device", 2 Kasım). Sonraki aşama sadece /output'u alıyor.
+cd /
+rm -rf /home/build /root/.cargo
