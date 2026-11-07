@@ -113,6 +113,7 @@ PACKAGES=(
   podman
   python
   gum # İlk kurulum ekranının (nos-firstboot) arayüzü
+  gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
 
   # Sanallaştırma (QEMU/KVM)
   qemu-desktop # Sanal makineyi çalıştıran program; ekran (SPICE), ses, USB aktarma desteğiyle. qemu-base'de ekran desteği yok, virt-manager'la ekran açılmaz
