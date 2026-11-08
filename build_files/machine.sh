@@ -8,7 +8,7 @@
 # Ortak imaj bootc için son hazırlığı (bootc-rootfs.sh) zaten yaptı; burada sadece yeni
 # paketler eklenir ve bıraktıkları toparlanır. initramfs ortak imajdaki olarak kalıyor
 # (yeniden üretmek build'i ~1 dk uzatıyordu): makine paketleri initrd'ye girmemeli
-# (NVIDIA 40-nos-omit.conf ile dışarıda; işlemci mikrokodu ortak imajda). Bir makine
+# (NVIDIA 40-nos-omit.conf ile dışarıda; işlemci mikrokodları ortak imajda). Bir makine
 # initrd'de bir şey isterse burada `bash /ctx/bootc/initramfs.sh` çağrılmalı; os-release'teki
 # VERSION_ID'yi önce çıkarıp sonra eklemek gerekir (bkz. Containerfile).
 #

@@ -24,7 +24,7 @@ Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servi
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
-- Ortak `nos` imajında ekran kartı ve ses kartı sürücüsü yok; bunlar makine imajında. İşlemci mikrokodu olarak sadece `intel-ucode` var, `amd-ucode` yok.
+- Ortak `nos` imajında ekran kartı ve ses kartı sürücüsü yok; bunlar makine imajında. İşlemci mikrokodu olarak hem `intel-ucode` hem `amd-ucode` var (açılışta işlemciye uyan uygulanır; diğeri birkaç MB yer kaplar).
 - Ekran kartı sürücüsü olarak sadece NVIDIA'nın sürücüsü (`nvidia-open`) var; o da sadece `nos-nitro`'da.
 - Tarayıcı olarak sadece **Helium** var (AUR'dan, imajın içinde). Başka hiçbir tarayıcı kurulmuyor.
 - Güvenlik duvarı olarak firewalld yerine daha basit olan **ufw** kullanılıyor.
@@ -56,7 +56,7 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
 Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sadece kurulum için gereken araçlar). Her şey kurulum sırasında sorulur; ilk açılışta hiçbir şey sorulmaz, direkt giriş ekranı gelir.
 
 1. BIOS/UEFI ayarlarından **Secure Boot'u kapat.** Önyükleyici ve NVIDIA sürücüsü imzalı değil. nos sadece UEFI ile açılır.
-2. [Releases](https://github.com/ichbinbekir/nos/releases) sayfasından en son `nos-installer-*.iso`'yu indir ve USB'ye yaz (`dd`, Ventoy, Fedora Media Writer vb.). Yeni ISO, GitHub'da **Actions → Build installer ISO → Run workflow** ile üretilir; içinde imaj olmadığı için sık yenilemek gerekmez.
+2. GitHub'da **Actions → Build installer ISO → Run workflow** ile ISO'yu üret, bitince çalışmanın **Artifacts** bölümünden `nos-installer`'ı indir (zip içinde ISO) ve USB'ye yaz (`dd`, Ventoy, Fedora Media Writer vb.). İçinde imaj olmadığı için sık yenilemek gerekmez. (Denemeler bitince ISO Releases'e de konacak.)
 3. USB'den aç. Kurulum programı kendiliğinden başlar ve sırayla sorar (ok tuşları, Enter; yazarak arama):
    - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
    - **imaj:** `nos-nitro` (Acer Nitro 16), `nos` (sürücüsüz temel) ya da `nos`'tan türetilmiş başka bir imajın adresi
