@@ -42,11 +42,14 @@ env:
   IMAGE_NAME: nos
 
 jobs:
+  # Ortak imaj (nos): sürücüsüz, her şeyin geri kalanı. Makine imajları bunun üzerine kurulur.
   build:
     runs-on: ubuntu-26.04
     timeout-minutes: 120
     env:
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,6 +87,7 @@ jobs:
       # yapıyor). Bu yüzden önce latest iki kez yüklenir, sonra tarih etiketi; hepsi aynı
       # kimliği taşır ve imza o kimliğe atılır.
       - name: Push image
+        id: push
         if: github.event_name != 'pull_request'
         run: |
           set -euxo pipefail
@@ -92,6 +96,7 @@ jobs:
             echo "$tag -> $(< /tmp/digestfile)"
           done
           echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
+          echo "digest=$(< /tmp/digestfile)" >> "$GITHUB_OUTPUT"
 
       # İmza, SIGNING_SECRET tanımlıysa atılır. Anahtar şifreliyse şifresi
       # COSIGN_PASSWORD secret'ında durur (bkz. README).
@@ -133,5 +138,91 @@ jobs:
         uses: actions/delete-package-versions@v5
         with:
           package-name: ${{ env.IMAGE_NAME }}
+          package-type: container
+          min-versions-to-keep: 30
+
+  # Makine imajları (nos-<makine>): ortak imajın az önce yüklenen sürümünün (digest) üzerine
+  # machines/<makine>/ eklenir. Makineler birbirini beklemez, aynı anda build edilir.
+  # Pull request'te ortak imaj yüklenmediği için çalışmaz.
+  machine:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        machine:
+          - nitro
+    env:
+      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+      MACHINE_IMAGE: nos-${{ matrix.machine }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      - name: Set registry
+        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build image
+        env:
+          BASE_IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
+        run: just build-machine "${{ matrix.machine }}"
+
+      - name: Rechunk image
+        run: just rechunk "$MACHINE_IMAGE"
+
+      # Etiketler ve iki kez latest: ortak imajdakiyle aynı sebep (podman#27796).
+      - name: Push image
+        run: |
+          set -euxo pipefail
+          for tag in latest latest "$(date -u +%Y%m%d)"; do
+            podman push --digestfile=/tmp/digestfile "$MACHINE_IMAGE:latest" "$IMAGE_REGISTRY/$MACHINE_IMAGE:$tag"
+            echo "$tag -> $(< /tmp/digestfile)"
+          done
+          echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
+
+      - name: Install cosign
+        if: env.SIGNING_SECRET != ''
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: 'v3.1.2'
+
+      - name: Sign image
+        if: env.SIGNING_SECRET != ''
+        env:
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$MACHINE_IMAGE@$DIGEST"
+
+      # Etiketsiz ve eski kayıtları silme: ortak imajdakiyle aynı kurallar.
+      - name: Delete untagged images
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.MACHINE_IMAGE }}
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 0
+
+      - name: Delete old images
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ env.MACHINE_IMAGE }}
           package-type: container
           min-versions-to-keep: 30

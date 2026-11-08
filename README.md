@@ -11,12 +11,21 @@ Sistem bir container imajı olarak GitHub'da build ediliyor ve bilgisayara bu im
 En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bunun için iki kural var:
 
 1. **Hafif.** Masaüstü ve uygulamalar sadece gerçekten kullanılanlardan oluşuyor; Arch isteğe bağlı bağımlılıkları kendiliğinden kurmadığı için gereksiz paket gelmiyor. Ama aşırıya da kaçılmıyor: git, ssh, man sayfaları gibi Linux'ta normalde bulunan ve arada bir gerekebilecek araçlar yerinde.
-2. **Sadece bu projenin sahibine yönelik.** İmaj tek bir bilgisayar ve tek bir kullanıcı için hazırlanıyor: **Acer Nitro 16** dizüstü, **Intel Core i7-13620H** işlemci (tümleşik Intel grafikle), **NVIDIA RTX 4050** ekran kartı, 16 GB RAM. Açıkça başka bir donanıma özel olan paketler kurulmuyor.
+2. **Sadece bu projenin sahibine yönelik.** İmaj tek bir kullanıcının bilgisayarları için hazırlanıyor. Şu an tek makine var: **Acer Nitro 16** dizüstü, **Intel Core i7-13620H** işlemci (tümleşik Intel grafikle), **NVIDIA RTX 4050** ekran kartı, 16 GB RAM. Açıkça başka bir donanıma özel olan paketler kurulmuyor.
+
+İki tür imaj var:
+
+| İmaj | İçinde | Ne için |
+|---|---|---|
+| `ghcr.io/ichbinbekir/nos` | Makineden bağımsız her şey; ekran kartı sürücüsü yok | Sanal makine, makine imajlarının temeli |
+| `ghcr.io/ichbinbekir/nos-nitro` | `nos` + Acer Nitro 16'nın sürücüleri ve ayarları (NVIDIA, Acer güç modları) | Dizüstü |
+
+Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servisler, ek dosyalar). Yeni bir bilgisayar için oraya bir klasör eklenir; GitHub önce `nos`'u, sonra makine imajlarını aynı anda build eder.
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
 - İşlemci mikrokodu olarak sadece `intel-ucode` var, `amd-ucode` yok.
-- Ekran kartı sürücüsü olarak sadece NVIDIA'nın sürücüsü (`nvidia-open`) var.
+- Ekran kartı sürücüsü olarak sadece NVIDIA'nın sürücüsü (`nvidia-open`) var; o da sadece `nos-nitro`'da.
 - Tarayıcı olarak sadece **Helium** var (AUR'dan, imajın içinde). Başka hiçbir tarayıcı kurulmuyor.
 - Güvenlik duvarı olarak firewalld yerine daha basit olan **ufw** kullanılıyor.
 - Firmware paketi (`linux-firmware`) ise eksik bir şey çıkmasın diye bütün olarak kuruluyor.
@@ -26,10 +35,10 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 ## İçinde ne var
 
 - **Masaüstü:** KDE Plasma (Wayland), SDDM giriş ekranı
-- **Grafik:** Dizüstü hibrit grafik (Intel tümleşik + NVIDIA). Masaüstü Intel ile çalışır, pil daha uzun gider. Bir uygulamayı NVIDIA ile çalıştırmak için uygulamaya sağ tıklayıp "Ayrık grafik kartıyla çalıştır" ya da terminalde `prime-run <uygulama>`; Steam oyunlarında başlatma seçeneklerine `prime-run %command%`.
+- **Grafik (`nos-nitro`):** Dizüstü hibrit grafik (Intel tümleşik + NVIDIA). Masaüstü Intel ile çalışır, pil daha uzun gider. Bir uygulamayı NVIDIA ile çalıştırmak için uygulamaya sağ tıklayıp "Ayrık grafik kartıyla çalıştır" ya da terminalde `prime-run <uygulama>`; Steam oyunlarında başlatma seçeneklerine `prime-run %command%`.
 - **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak), Btrfs Assistant (snapshot)
 - **Tarayıcı:** Helium
-- **Güç modları ve fanlar (Acer Nitro):** KDE'nin pil simgesindeki güç modu seçicisi (güç tasarrufu, dengeli, performans = turbo) ve klavyedeki turbo/NitroSense tuşu (modlar sırayla döner: eco, sessiz, dengeli, performans, turbo; tuş rengi yeşil eco, beyaz sessiz, turuncu dengeli, kırmızı performans, mor turbo). Fan devri ve sıcaklıklar `sensors` ve Sistem İzleyici'de.
+- **Güç modları ve fanlar (`nos-nitro`):** KDE'nin pil simgesindeki güç modu seçicisi (güç tasarrufu, dengeli, performans = turbo) ve klavyedeki turbo/NitroSense tuşu (modlar sırayla döner: eco, sessiz, dengeli, performans, turbo; tuş rengi yeşil eco, beyaz sessiz, turuncu dengeli, kırmızı performans, mor turbo). Fan devri ve sıcaklıklar `sensors` ve Sistem İzleyici'de.
 - **Araçlar:** fish, fastfetch, htop, unzip, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
 - **Görünüm:** Sistem adı her yerde `nos` olarak görünür. fastfetch'te kendi logosu var: mavi bir NOS (nitro) tüpü. İsim de buradan geliyor.
 
@@ -55,10 +64,11 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
    sudo podman run --rm --privileged --pid=host \
      --security-opt label=type:unconfined_t \
      -v /var/lib/containers:/var/lib/containers -v /dev:/dev \
-     ghcr.io/ichbinbekir/nos:latest \
+     ghcr.io/ichbinbekir/nos-nitro:latest \
      bootc install to-disk --composefs-backend --bootloader systemd \
        --filesystem btrfs --wipe /dev/nvme0n1
    ```
+   Dizüstü (Acer Nitro 16) için `nos-nitro`; makine imajı olmayan bir bilgisayarda `nos`.
    Dosya sistemi btrfs olmalı (`--filesystem btrfs`): imaj diski zstd ile sıkıştırarak kullanıyor, başka bir dosya sistemiyle açılmaz.
 4. Yeniden başlat. İlk açılışta bir kurulum ekranı gelir ve sırayla saat dilimi, sistem dili, klavye düzeni, bilgisayar adı, kullanıcı adı, görünen ad ve şifre sorulur (ok tuşları ve Enter ile). Sonda bir özet gösterilir; "Kur" denmeden sistemde hiçbir şey değişmez. Bitince giriş ekranı açılır. Kullanıcının kabuğu fish olarak ayarlanır.
 
@@ -75,7 +85,7 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
    - En az 4 GB RAM, 2 işlemci. Ekran → Grafik denetleyicisi: VMSVGA.
 4. Aç. İlk açılış adımları yukarıdaki 4. adımla aynı.
 
-Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girmez; ekran VirtualBox'ın kendi grafik sürücüsüyle çalışır, masaüstü biraz yavaş olabilir. Disk 20 GB.
+Disk imajı ortak `nos` imajından üretiliyor (NVIDIA sürücüsü yok); ekran VirtualBox'ın kendi grafik sürücüsüyle çalışır, masaüstü biraz yavaş olabilir. Disk 20 GB.
 
 ## Kullanım
 
@@ -83,7 +93,7 @@ Sanal makinede NVIDIA kartı olmadığı için NVIDIA sürücüsü devreye girme
 |---|---|
 | Güncelle (yeniden başlatınca uygulanır) | `sudo bootc upgrade` |
 | Önceki sürüme dön | `sudo bootc rollback` |
-| Belirli bir günün sürümüne geç (son ~15 gün) | `sudo bootc switch ghcr.io/ichbinbekir/nos:YYYYMMDD` (geri: `...nos:latest`) |
+| Belirli bir günün sürümüne geç (son ~15 gün) | `sudo bootc switch ghcr.io/ichbinbekir/nos-nitro:YYYYMMDD` (geri: `...nos-nitro:latest`; sanal makinede `nos`) |
 | Hangi sürümdeyim | `sudo bootc status` |
 | Güncelleme var mı (indirmeden) | `sudo bootc upgrade --check` |
 | Otomatik güncellemeyi bu oturumda durdur | `sudo systemctl stop nos-update.timer` |
@@ -153,10 +163,10 @@ Snapshot ayarını ilk kurulum ekranı yapıyor; `switch` ile gelen sistemlerde 
 İmajlar [cosign](https://github.com/sigstore/cosign) ile imzalanıyor. Doğrulamak için:
 
 ```
-cosign verify --key cosign.pub ghcr.io/ichbinbekir/nos:latest
+cosign verify --key cosign.pub ghcr.io/ichbinbekir/nos-nitro:latest
 ```
 
-Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `ghcr.io/ichbinbekir/nos` imajı bu anahtarla imzalı değilse güncelleme reddedilir (`/etc/containers/policy.json`). Diğer imajlar (Distrobox, podman) bundan etkilenmez.
+Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `ghcr.io/ichbinbekir/nos` ve `nos-nitro` imajları bu anahtarla imzalı değilse güncelleme reddedilir (`/etc/containers/policy.json`). Diğer imajlar (Distrobox, podman) bundan etkilenmez.
 
 ## Lisans
 

@@ -2,6 +2,7 @@ image_name := env("IMAGE_NAME", "nos")
 tag := env("IMAGE_TAG", "latest")
 filesystem := env("BUILD_FILESYSTEM", "btrfs")
 bootc_image := env("BOOTC_IMAGE", "ghcr.io/ichbinbekir/nos-bootc:latest")
+base_image := env("BASE_IMAGE", "ghcr.io/ichbinbekir/nos:latest")
 
 [private]
 default:
@@ -10,6 +11,10 @@ default:
 # İmajı build eder (bootc, bootc_image imajından kopyalanır)
 build $image_name=image_name $tag=tag $bootc_image=bootc_image:
     podman build --pull=newer --file Containerfile --build-arg BOOTC_IMAGE="${bootc_image}" --tag "${image_name}:${tag}" .
+
+# Makine imajını (nos-<makine>) ortak imajın üzerine build eder (machines/<makine>/)
+build-machine machine $base_image=base_image $tag=tag:
+    podman build --file machines/Containerfile --build-arg BASE_IMAGE="${base_image}" --build-arg MACHINE="{{ machine }}" --tag "nos-{{ machine }}:${tag}" .
 
 # bootc'yi derleyip sadece onu içeren küçük imajı build eder. version boşsa en son sürüm.
 build-bootc $version="" $image_name="nos-bootc":

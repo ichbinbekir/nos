@@ -1,0 +1,22 @@
+# Makine imajı (nos-<makine>): ortak nos imajının üzerine o makinenin sürücülerini ve
+# ayarlarını ekler (build_files/machine.sh, machines/<makine>/). Build bağlamı reponun kökü.
+# CI ortak imajı yükledikten hemen sonra bunu, yüklenen imajın kimliğiyle (digest) build eder.
+ARG BASE_IMAGE=ghcr.io/ichbinbekir/nos:latest
+
+FROM scratch AS ctx
+COPY build_files /
+COPY machines /machines
+
+FROM ${BASE_IMAGE}
+
+ARG MACHINE
+
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=cache,dst=/usr/lib/sysimage/cache/pacman/pkg \
+    --mount=type=tmpfs,dst=/run \
+    --mount=type=tmpfs,dst=/tmp \
+    bash /ctx/machine.sh "${MACHINE}"
+
+LABEL containers.bootc 1
+
+RUN bootc container lint

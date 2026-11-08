@@ -1,0 +1,2 @@
+# Açılışta etkin olacak servisler.
+nvidia-powerd.service # Dynamic Boost: oyunda güç bütçesini işlemciden ekran kartına kaydırır
