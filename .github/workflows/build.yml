@@ -179,8 +179,8 @@ jobs:
 
       - name: Build image
         env:
-          BASE_IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
-        run: just build-machine "${{ matrix.machine }}"
+          BASE_DIGEST: ${{ needs.build.outputs.digest }}
+        run: BASE_IMAGE="$IMAGE_REGISTRY/$IMAGE_NAME@$BASE_DIGEST" just build-machine "${{ matrix.machine }}"
 
       - name: Rechunk image
         run: just rechunk "$MACHINE_IMAGE"
