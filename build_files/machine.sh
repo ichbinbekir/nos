@@ -47,6 +47,10 @@ bash /ctx/var-tmpfiles.sh "/usr/lib/tmpfiles.d/nos-var-$machine.conf"
 # tarihi) önce çıkarılır, sonra eklenir; yoksa initrd her gün değişir (bkz. Containerfile).
 # dracut geçici dosyaları /var/tmp'ye yazıyor; /var ortak imajda boş.
 sed -i '/^VERSION_ID=/d' /usr/lib/os-release
+# Görünen ad makineyi de söylesin (açılış menüsü, fastfetch, KDE "Bu Sistem Hakkında"):
+# "nos-nitro". NAME/ID "nos" kalıyor. Her gün aynı olduğu için initrd'yi değiştirmiyor.
+sed -i -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"nos-$machine\"/" -e '/^VARIANT_ID=/d' /usr/lib/os-release
+echo "VARIANT_ID=$machine" >>/usr/lib/os-release
 mkdir -p /var/tmp
 bash /ctx/bootc/initramfs.sh
 echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
