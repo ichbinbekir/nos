@@ -18,6 +18,7 @@ PACKAGES=(
   base
   linux
   linux-firmware
+  intel-ucode # İşlemci mikrokodu; initramfs'in başına giriyor. AMD işlemcide yok sayılır (birkaç MB)
   dracut
   ostree
   bubblewrap
@@ -32,7 +33,8 @@ PACKAGES=(
   glib2
   shadow
 
-  # İşlemci mikrokodu, ekran kartı ve ses kartı sürücüleri makine imajlarında (machines/).
+  # Ekran kartı ve ses kartı sürücüleri makine imajlarında (machines/). İşlemci mikrokodu ortakta
+  # (yukarıda): makine imajı initramfs'i yeniden üretmiyor.
   zram-generator # Sıkıştırılmış RAM takası (ayarı system_files'ta)
   plymouth # Açılışta yazılar yerine sade animasyon (bgrt teması: üretici logosu + dönen simge). initramfs.sh'den önce kurulu olmalı
 

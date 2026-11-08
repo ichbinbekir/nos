@@ -1,10 +1,6 @@
 # Acer Nitro 16 (AN16-51): Intel i7-13620H + NVIDIA RTX 4050 Laptop, hibrit grafik.
 # Masaüstü Intel ile çalışır, NVIDIA sadece istenen uygulamalarda devreye girer.
 
-# İşlemci mikrokodu. Açılış dosyasının (initramfs) başına giriyor; machine.sh initramfs'i
-# makinenin paketleriyle yeniden üretiyor.
-intel-ucode
-
 # Ses kartı: Intel SOF (Sound Open Firmware); bu olmadan dahili ses çalışmıyor.
 sof-firmware
 

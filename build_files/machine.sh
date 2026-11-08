@@ -5,8 +5,12 @@
 #   services.txt  etkinleştirilecek servisler (aynı biçim)
 #   system_files/ köke olduğu gibi kopyalanan dosyalar
 #
-# Ortak imaj bootc için son hazırlığı (bootc-rootfs.sh) zaten yaptı; burada yeni paketler
-# eklenir, açılış dosyası (initramfs) yeniden üretilir ve paketlerin bıraktıkları toparlanır.
+# Ortak imaj bootc için son hazırlığı (bootc-rootfs.sh) zaten yaptı; burada sadece yeni
+# paketler eklenir ve bıraktıkları toparlanır. initramfs ortak imajdaki olarak kalıyor
+# (yeniden üretmek build'i ~1 dk uzatıyordu): makine paketleri initrd'ye girmemeli
+# (NVIDIA 40-nos-omit.conf ile dışarıda; işlemci mikrokodu ortak imajda). Bir makine
+# initrd'de bir şey isterse burada `bash /ctx/bootc/initramfs.sh` çağrılmalı; os-release'teki
+# VERSION_ID'yi önce çıkarıp sonra eklemek gerekir (bkz. Containerfile).
 #
 # Kullanım: machine.sh <makine adı>
 
@@ -42,18 +46,12 @@ find /etc -name '*.pacnew' -delete
 # Yeni paketlerin /var klasörleri (ortak imajınkiler nos-var.conf'ta).
 bash /ctx/var-tmpfiles.sh "/usr/lib/tmpfiles.d/nos-var-$machine.conf"
 
-# initramfs makinenin paketleriyle yeniden üretilir (ör. intel-ucode işlemci mikrokodunu
-# initrd'nin başına koyuyor). dracut os-release'i initrd'ye kopyaladığı için sürüm (build
-# tarihi) önce çıkarılır, sonra eklenir; yoksa initrd her gün değişir (bkz. Containerfile).
-# dracut geçici dosyaları /var/tmp'ye yazıyor; /var ortak imajda boş.
-sed -i '/^VERSION_ID=/d' /usr/lib/os-release
 # Görünen ad makineyi de söylesin (açılış menüsü, fastfetch, KDE "Bu Sistem Hakkında"):
-# "nos-nitro". NAME/ID "nos" kalıyor. Her gün aynı olduğu için initrd'yi değiştirmiyor.
-sed -i -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"nos-$machine\"/" -e '/^VARIANT_ID=/d' /usr/lib/os-release
+# "nos-nitro". NAME/ID "nos" kalıyor. Sürüm makine build'inin tarihi. initrd'deki os-release
+# ortak imajınki olarak kalıyor; bootc menü adını kök dosya sistemindekinden alıyor.
+sed -i -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"nos-$machine\"/" -e '/^VARIANT_ID=/d' \
+  -e "s/^VERSION_ID=.*/VERSION_ID=$(date -u +%Y%m%d)/" /usr/lib/os-release
 echo "VARIANT_ID=$machine" >>/usr/lib/os-release
-mkdir -p /var/tmp
-bash /ctx/bootc/initramfs.sh
-echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
 
 # bootc-rootfs.sh'deki temizliğin paket kurulumundan etkilenen kısmı.
 find /var -mindepth 1 -delete
