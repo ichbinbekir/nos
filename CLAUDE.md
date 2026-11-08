@@ -99,6 +99,54 @@ Yapı iki kaynaktan birleştirildi:
 
 Bekleyen işler ve sahibinden beklenen kararlar. Bitince buradan çıkarılır.
 
+- **Yeni mimari: ortak `nos` + makine imajları (8 Kasım 2026, sahibiyle kararlaştırıldı, başlanmadı):**
+  - **Amaç:** Her şey bu repoda; "herkes kullansın" hedefi yok (şablon, ayrı repo, ara katman düşünüldü ve bırakıldı). Yeni bir bilgisayara kurulunca ortam hazır gelsin; makineye özel tek şey sürücüler ve bilgisayar adı.
+  - **`nos` (ortak imaj, `ghcr.io/ichbinbekir/nos` adı korunur):**
+    - Sürücüsüz; geri kalan her şey burada: KDE, uygulamalar, kullanıcı, dil, dotfiles.
+    - Doğrudan da kurulabilir; VM denemeleri için ideal (NVIDIA hataları olmaz).
+  - **Makine imajları:**
+    - `machines/<ad>/` → `ghcr.io/ichbinbekir/nos-<ad>`, `FROM nos`.
+    - Klasörde paket listesi ve `system_files/` var: sürücüler, bilgisayar adı (`/etc/hostname`), makineye özel ayarlar.
+    - İlk makine `nitro`: NVIDIA (`nvidia-open`, `nvidia-utils`, `nvidia-prime`, `nvidia-powerd` servisi), Acer `nos-acer.conf`, muhtemelen `switcheroo-control`.
+    - Masaüstü gelince `machines/desktop/`. İki makinede de NVIDIA varsa NVIDIA ortağa taşınabilir (bu bir düzen kararı, hız farkı yok).
+  - **CI:**
+    - Tek workflow: önce `nos` job'ı, sonra makineler `needs: nos` ile paralel matrix.
+    - Makine build'i ~4–5 dk (paket + son temizlik + rechunk + push); toplam ~15 dk.
+    - Her imaj ayrı imzalanır; `policy.json`'daki `matchRepository` makine imajlarını da kapsamalı.
+  - **Makine build'inde dikkat:**
+    - pacman DB `/usr/lib/sysimage`'da; pacman'i ona göre çalıştır.
+    - `/var` boşaltma ve `nos-var.conf` üretimi yeniden yapılmalı (yeni paketlerin `/var` klasörleri). `bootc container lint` de tekrar çalışmalı.
+    - Ortak imajın son adımlarını makine build'inin de çağırabileceği bir betiğe ayır.
+    - initramfs makinede yeniden üretilmiyor (NVIDIA zaten `omit_drivers`'ta). Bir makine initrd'de sürücü isterse yeniden üretilmeli.
+    - `VERSION_ID` ekleme adımı makine imajında da olmalı.
+  - **Kullanıcı ve dil dosyadan gelecek; ilk açılışta sadece şifre sorulur:**
+    - `sysusers.d`: `u bekir 1000 "Bekir Ün" /var/home/bekir /usr/bin/fish`, `m bekir wheel`, `m bekir libvirt`.
+    - Ev klasörü ve `/etc/subuid`/`subgid` (podman için) dosyayla.
+    - Dil, klavye, saat dilimi `/etc/locale.conf`, `vconsole.conf`, `localtime` olarak. Sahibi arayüzü İngilizce, klavyeyi Türkçe istiyor; saat dilimi İstanbul (teyit et).
+    - Şifre repoya hiçbir biçimde (hash dahil) girmez. İlk açılışta tek soru: "bekir için şifre". Kullanıcıyı oluştururken `useradd -m` gibi `/etc/skel`'i kopyalar.
+    - Hiç kullanıcı tanımı yoksa yedek olarak sadece root şifresi sorulur. KDE root girişine izin vermediği için kullanıcı tty'den oluşturulur; README'ye yazılacak.
+    - Mevcut gum'lu `nos-firstboot` bu sadeleşmeyle değişir.
+    - Sahibinin bugünkü sistemi `bootc switch` ile `nos-nitro`'ya geçince kullanıcı zaten var: hiçbir şey sorulmamalı, ev klasörüne dokunulmamalı.
+  - **Dotfiles:**
+    - `dotfiles/` klasörü (fish, git, VS Code ayarları vb.) build'de `/etc/skel`'e kopyalanır; sadece ilk kurulumda ev klasörüne gelir, sonra dokunulmaz (sahibinin isteği).
+    - `/var/home` imaja girmez, bootc `/var`'ı güncellemez; ev klasörü imajdan yönetilemez.
+    - Gizli bilgiler (SSH anahtarları vb.) repoya girmez.
+    - chezmoi ile iki yönlü eşitleme ayrı ve sonraki bir özellik (sahibi istiyor, öncelik değil).
+  - **Sıra:**
+    1. Makine klasörü yapısı + CI + NVIDIA/Acer'ın `machines/nitro/`'ya taşınması; sahibi `bootc switch ghcr.io/ichbinbekir/nos-nitro` yapar.
+    2. Kullanıcı/dil dosyaya, ilk açılış sadeleşmesi.
+    3. `dotfiles/` + `/etc/skel`.
+    4. Geliştirme kutusu (aşağıda).
+    5. chezmoi, kurulum ISO'su.
+  - **README ve CLAUDE.md:** Kurallar "sahibinin donanımı" maddesi ortak/makine ayrımına göre güncellenecek.
+- **Geliştirme kutusu (distrobox, mimariden sonra):**
+  - Go, Python (uv), Node tek kutuda; birbirine karışmıyorlar. Proje başına sürüm için mise.
+  - Kutu bir Containerfile'dan build edilir (ör. `boxes/dev/`, haftalık CI, `ghcr.io/ichbinbekir/box-dev`).
+  - Kutular `distrobox assemble` ayar dosyasıyla oluşturulur: ad `box-dev`, ev klasörü `~/.var/virtual/dev`, `~/.ssh` ve `~/.gitconfig` bağlı.
+  - Güncelleme ya da bozulmada kutu silinip imajdan yeniden kurulur; ev klasörü kalır.
+  - Flutter kutusu (`box-flutter`, `~/Documents/Mobil-CLAUDE.md`) boyutu yüzünden ayrı kalır.
+  - Git ana sistemde kalır (küçük, temel araç; sahibi kaldırmayı düşündü, önerilmedi).
+
 - **Kurulum ISO'su (planlanıyor, sahibi istiyor):** archiso ile canlı ISO; içinde podman, gum ve kurulum programı; `cow_spacesize` açılış satırına hazır yazılı; GitHub Actions'ta elle üretilip Releases'e konacak; imaj kurulumda internetten çekilecek (ISO küçük kalsın). Kurulum programı: internet (Wi-Fi seçimi), disk seçimi, "tüm disk" ya da "boş alana kur (dual boot)", Windows algılanırsa açılış menüsüne ekleme, silme işleminde disk adını yazdırarak onay. Sahibi bu noktada ara verdi; kararlar bekleniyor (aşağıdaki dual boot maddesi).
 - **Dual boot (Windows ile):** İsteniyor; kurulum ISO'su bunu yapacak (`bootc install to-filesystem` ile hazır bölüme).
   - Diskler: iki adet 512 GB M.2 NVMe. 1. disk: Windows + şu an **Aurora** (Windows'un yanında; 512 MB ortak EFI, Aurora'nın 2 GB `/boot`'u ve kök bölümü). 2. disk: NTFS veri diski (oyunlar, resimler, videolar; Windows'tan da erişilsin diye NTFS), korunacak.
