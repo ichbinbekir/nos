@@ -1,0 +1,37 @@
+name: Build installer ISO
+
+# Kurulum ISO'sunu (iso/, archiso) build edip GitHub Releases'e koyar. Elle tetiklenir:
+# ISO'nun içinde imaj yok, kurulum sırasında en son imaj internetten indiriliyor; bu yüzden
+# ISO sadece kurulum programı ya da canlı ortam değişince yeniden üretilmeli.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  iso:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # mkarchiso loop aygıtı ve bağlama (mount) kullandığı için root ve --privileged gerekiyor.
+      - name: Build ISO
+        run: |
+          set -euxo pipefail
+          sudo podman run --rm --privileged -v "$PWD:/w" docker.io/archlinux/archlinux:latest \
+            bash -c 'pacman -Syu --noconfirm archiso && mkarchiso -v -w /tmp/work -o /w/out /w/iso'
+          sudo chown -R "$(id -u):$(id -g)" out
+          cd out && sha256sum ./*.iso > SHA256SUMS && ls -lh
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euxo pipefail
+          tag="iso-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" out/*.iso out/SHA256SUMS \
+            --title "nos kurulum ISO'su $(date -u +%Y-%m-%d)" \
+            --notes "USB'ye yaz (ör. \`dd\` ya da Ventoy), UEFI ile aç. Kurulum programı kendiliğinden başlar; imaj kurulum sırasında indirilir. Bkz. README \"Kurulum\"."

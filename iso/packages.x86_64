@@ -1,0 +1,26 @@
+# Canlı ortam
+base
+linux
+linux-firmware
+intel-ucode
+amd-ucode
+mkinitcpio
+mkinitcpio-archiso
+
+# Ağ (kablolu otomatik; Wi-Fi kurulum programından nmtui ile)
+networkmanager
+wireless-regdb
+
+# Kurulum
+podman
+skopeo
+gum
+btrfs-progs
+dosfstools
+gptfdisk
+parted
+ntfs-3g
+
+# Arıza durumunda elle müdahale için
+nano
+less

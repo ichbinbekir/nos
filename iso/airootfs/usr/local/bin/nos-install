@@ -1,0 +1,520 @@
+#!/usr/bin/env bash
+# nos kurulum programı. Kurulum ISO'sunda tty1'de kendiliğinden başlar (iso/).
+#
+# Akış: Önce bütün sorular sorulur (ağ, imaj, dil, klavye, saat dilimi, bilgisayar adı,
+# kullanıcı, şifre, disk), sonra özet gösterilip onay alınır. Onaydan önce diske hiçbir şey
+# yazılmaz. Sonra:
+#   1. İmaj indirilir (podman, RAM'deki /var/lib/containers'a).
+#   2. Disk hazırlanır: ya bütün disk (1 GB EFI + btrfs) ya da Windows vb. korunarak boş
+#      alana / seçilen bir bölüme btrfs. EFI bölümü diskteki mevcut olansa paylaşılır;
+#      systemd-boot aynı EFI'deki Windows'u menüye kendisi ekler.
+#   3. bootc install to-filesystem (imajın kendi içinden, podman ile).
+#   4. Yeni sistemin ayarları yazılır: /etc (bootc composefs: state/deploy/<sürüm>/etc) ve
+#      /var (state/os/default/var). Kullanıcı, şifre ve snapshot ayarı yeni sistemin kendi
+#      araçlarıyla, chroot içinde (yeni sistemin /etc ve /var'ı + imajın /usr'ı).
+# Böylece ilk açılışta hiçbir şey sorulmaz.
+
+set -uo pipefail
+
+# --- Varsayılan cevaplar (sahibinin tercihleri; kurulumda hepsi değiştirilebilir) ---------
+DEFAULT_IMAGE=ghcr.io/ichbinbekir/nos-nitro:latest
+DEFAULT_LOCALE=en_US.UTF-8
+DEFAULT_KEYMAP=trq
+DEFAULT_TIMEZONE=Europe/Istanbul
+DEFAULT_HOSTNAME=billmonster
+DEFAULT_USERNAME=bekir
+DEFAULT_FULLNAME="Bekir Ün"
+# Hazır imaj seçenekleri ("ad|adres"); listede olmayan bir imaj adresi elle de yazılabilir.
+IMAGES=(
+  "nos-nitro (Acer Nitro 16)|ghcr.io/ichbinbekir/nos-nitro:latest"
+  "nos (sürücüsüz temel imaj)|ghcr.io/ichbinbekir/nos:latest"
+)
+
+MIN_SIZE_GB=40 # nos için en az bu kadar yer
+ESP_SIZE=1G    # Bütün disk kurulumunda EFI bölümü (birkaç sistem sürümünün çekirdeği sığsın)
+ESP_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+MSR_TYPE=e3c9e316-0b5c-4db8-817d-f92df00215ae
+TARGET=/mnt
+LOG=/root/nos-install.log
+ACCENT=4
+
+# --- Yardımcılar ---------------------------------------------------------------------------
+
+header() {
+  clear
+  gum style --border normal --border-foreground "$ACCENT" --padding "0 2" --margin "1 2" \
+    --bold "nos kurulumu" "$1"
+}
+
+error() { gum style --foreground 1 --margin "0 2" "$@"; }
+info() { gum style --margin "0 2" "$@"; }
+
+# gum Esc/Ctrl+C ile çıkınca boş döner; boş cevap kabul edilmez, soru tekrarlanır.
+choose() {
+  local out
+  while :; do
+    out=$(gum choose --padding "0 2" "$@") || true
+    [[ -n "$out" ]] && break
+  done
+  printf '%s' "$out"
+}
+
+human() { numfmt --to=iec --suffix=B "$1"; }
+
+# --- Sorular ---------------------------------------------------------------------------------
+
+ask_keymap() {
+  header "Klavye düzeni"
+  local -A keymaps=(["Türkçe Q"]=trq ["Türkçe F"]=trf ["İngilizce (ABD)"]=us)
+  local label default_label="Türkçe Q" choice
+  for label in "${!keymaps[@]}"; do
+    [[ "${keymaps[$label]}" == "${KEYMAP:-$DEFAULT_KEYMAP}" ]] && default_label="$label"
+  done
+  choice=$(choose --selected "$default_label" "Türkçe Q" "Türkçe F" "İngilizce (ABD)" "Diğer...")
+  if [[ "$choice" == "Diğer..." ]]; then
+    header "Klavye düzeni (yazarak ara)"
+    KEYMAP=""
+    while [[ -z "$KEYMAP" ]]; do
+      KEYMAP=$(localectl list-keymaps | gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+    done
+  else
+    KEYMAP="${keymaps[$choice]}"
+  fi
+  # Sonraki sorularda doğru harfler yazılsın.
+  loadkeys "$KEYMAP" 2>/dev/null || true
+}
+
+ask_network() {
+  while ! curl -sS -o /dev/null --max-time 10 https://ghcr.io/v2/ 2>/dev/null; do
+    header "İnternet bağlantısı yok (imaj kurulum sırasında indiriliyor)"
+    case $(choose "Wi-Fi'ye bağlan" "Tekrar dene" "Kabuğa çık") in
+      "Wi-Fi'ye bağlan") nmtui-connect ;;
+      "Kabuğa çık") exit 1 ;;
+    esac
+  done
+}
+
+ask_image() {
+  local entry labels=() choice value="${IMAGE:-$DEFAULT_IMAGE}" bootc
+  for entry in "${IMAGES[@]}"; do labels+=("${entry%%|*}"); done
+  while :; do
+    header "Kurulacak imaj"
+    choice=$(choose "${labels[@]}" "Başka bir imaj adresi...")
+    if [[ "$choice" == "Başka bir imaj adresi..." ]]; then
+      header "İmaj adresi (ör. ghcr.io/kullanici/imaj:latest)"
+      value=$(gum input --padding "0 2" --value "$value" --width 70) || true
+    else
+      for entry in "${IMAGES[@]}"; do
+        [[ "${entry%%|*}" == "$choice" ]] && value="${entry#*|}"
+      done
+    fi
+    [[ -n "$value" ]] || continue
+    # Sadece bootc imajları kurulabilir (containers.bootc etiketi).
+    if bootc=$(gum spin --title "İmaj kontrol ediliyor..." -- \
+      skopeo inspect --no-tags --format '{{index .Labels "containers.bootc"}}' "docker://$value" 2>&1) &&
+      [[ "$bootc" == 1 ]]; then
+      IMAGE="$value"
+      return
+    fi
+    error "Bu adreste kurulabilir bir bootc imajı bulunamadı:" "$bootc"
+    sleep 3
+  done
+}
+
+ask_locale() {
+  header "Sistem dili"
+  case $(choose --selected "$([[ ${LOCALE:-$DEFAULT_LOCALE} == tr_* ]] && echo Türkçe || echo English)" \
+    "English" "Türkçe") in
+    English) LOCALE=en_US.UTF-8 ;;
+    Türkçe) LOCALE=tr_TR.UTF-8 ;;
+  esac
+}
+
+ask_timezone() {
+  header "Saat dilimi (yazarak ara, ok tuşlarıyla seç, Enter)"
+  local tz="" first="${TIMEZONE:-$DEFAULT_TIMEZONE}"
+  while [[ -z "$tz" ]]; do
+    tz=$({ echo "$first"; timedatectl list-timezones | grep -vx "$first"; } |
+      gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+  done
+  TIMEZONE="$tz"
+}
+
+ask_hostname() {
+  local name value="${HOSTNAME_VALUE:-$DEFAULT_HOSTNAME}"
+  while :; do
+    header "Bilgisayar adı (ağda bu adla görünür)"
+    name=$(gum input --padding "0 2" --value "$value" --char-limit 63) || true
+    name="${name,,}"
+    [[ "$name" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] && break
+    error "Geçersiz ad: küçük harf, rakam ve - kullanılabilir; - ile başlayıp bitemez."
+    sleep 2
+    value="$name"
+  done
+  HOSTNAME_VALUE="$name"
+}
+
+ask_username() {
+  local name value="${USERNAME:-$DEFAULT_USERNAME}"
+  # Sistem hesaplarıyla çakışmasın (imajdaki /etc/passwd'deki adlar burada da var).
+  local reserved=" root bin daemon mail ftp http nobody dbus systemd-network polkitd "
+  while :; do
+    header "Kullanıcı adı (giriş ve ev dizini için; küçük harf)"
+    name=$(gum input --padding "0 2" --value "$value" --char-limit 32) || true
+    if [[ ! "$name" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+      error "Geçersiz ad: küçük harf, rakam, - ve _ kullanılabilir; harfle başlamalı."
+    elif [[ "$reserved" == *" $name "* ]]; then
+      error "Bu ad bir sistem hesabına ait, başka bir ad seç."
+    else
+      break
+    fi
+    sleep 2
+    value="$name"
+  done
+  USERNAME="$name"
+}
+
+ask_fullname() {
+  header "Görünen ad (giriş ekranında görünür; isteğe bağlı)"
+  local name
+  name=$(gum input --padding "0 2" --value "${FULLNAME:-$DEFAULT_FULLNAME}" --char-limit 64) || true
+  FULLNAME="${name//:/}"
+}
+
+ask_password() {
+  local p1 p2
+  while :; do
+    header "Şifre ($USERNAME; sudo için de bu kullanılır)"
+    p1=$(gum input --padding "0 2" --password --placeholder "Şifre") || true
+    if [[ -z "$p1" ]]; then
+      error "Şifre boş olamaz."
+      sleep 1.5
+      continue
+    fi
+    p2=$(gum input --padding "0 2" --password --placeholder "Şifre (tekrar)") || true
+    [[ "$p1" == "$p2" ]] && break
+    error "Şifreler aynı değil, tekrar dene."
+    sleep 1.5
+  done
+  PASSWORD="$p1"
+}
+
+# Kurulum ortamının kendi diski (USB) listede çıkmasın.
+boot_disk() {
+  local src
+  src=$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null) || return 0
+  lsblk -no PKNAME "$src" 2>/dev/null | head -n1
+}
+
+# Diskteki en büyük boş alan: "başlangıç bitiş boyut" (diskin kendi sektörüyle; 512 ya da 4096 bayt).
+largest_free() {
+  parted -sm "$1" unit s print free 2>/dev/null |
+    awk -F: '/free;$/ { s=$2; e=$3; z=$4; sub(/s$/,"",s); sub(/s$/,"",e); sub(/s$/,"",z);
+                       if (z+0 > best) { best=z+0; out=s" "e" "z } } END { if (out) print out }'
+}
+
+# Silinip yerine kurulabilecek bölümler (EFI ve Microsoft ayrılmış bölümü hariç):
+# "yol  boyut  dosya-sistemi  etiket". Boş sütunlar kaymasın diye her bölüm ayrı sorgulanır.
+list_partitions() {
+  local p t
+  for p in $(lsblk -lnpo PATH,TYPE "$1" | awk '$2 == "part" { print $1 }'); do
+    t=$(lsblk -dno PARTTYPE "$p")
+    [[ ${t,,} == "$ESP_TYPE" || ${t,,} == "$MSR_TYPE" ]] && continue
+    printf '%s  %s  %s  %s\n' "$p" "$(lsblk -dno SIZE "$p" | xargs)" \
+      "$(lsblk -dno FSTYPE "$p" | xargs)" "$(lsblk -dno LABEL "$p" | xargs)"
+  done
+}
+
+disk_esp() {
+  lsblk -lnpo PATH,PARTTYPE "$1" | awk -v t="$ESP_TYPE" 'tolower($2) == t { print $1; exit }'
+}
+
+ask_disk() {
+  local skip lines=() line choice esp free start end size parts=() label part
+  skip=$(boot_disk)
+  while :; do
+    header "Kurulacak disk"
+    mapfile -t lines < <(lsblk -dpno NAME,SIZE,MODEL,TYPE | awk -v s="/dev/$skip" '$NF == "disk" && $1 != s && $1 !~ /zram/' |
+      sed 's/[[:space:]]*disk$//')
+    if ((${#lines[@]} == 0)); then
+      error "Kurulabilecek disk bulunamadı."
+      sleep 3
+      continue
+    fi
+    choice=$(choose "${lines[@]}")
+    DISK="${choice%% *}"
+    info "Diskteki bölümler:"
+    lsblk -po NAME,SIZE,FSTYPE,PARTTYPENAME,LABEL "$DISK" | sed 's/^/    /'
+    echo
+    esp=$(disk_esp "$DISK")
+    read -r start end size < <(largest_free "$DISK"; echo)
+    local ss
+    ss=$(blockdev --getss "$DISK")
+    local modes=("Bütün diski sil ve nos'u kur")
+    if [[ -n "$esp" ]]; then
+      if [[ -n "$size" ]] && ((size * ss >= MIN_SIZE_GB * 1024 ** 3)); then
+        modes+=("Boş alana kur ($(human $((size * ss))); diğer bölümler korunur)")
+      fi
+      modes+=("Bir bölümün yerine kur (o bölüm silinir, diğerleri korunur)")
+    fi
+    modes+=("Başka bir disk seç")
+    choice=$(choose "${modes[@]}")
+    case "$choice" in
+      "Bütün diski"*)
+        MODE=wipe
+        ;;
+      "Boş alana"*)
+        MODE=free FREE_START=$start FREE_END=$end ESP=$esp
+        ;;
+      "Bir bölümün"*)
+        mapfile -t parts < <(list_partitions "$DISK")
+        if ((${#parts[@]} == 0)); then
+          error "Seçilebilecek bölüm yok."
+          sleep 2
+          continue
+        fi
+        header "Silinip yerine nos kurulacak bölüm"
+        label=$(choose "${parts[@]}")
+        part="${label%% *}"
+        if (($(lsblk -bdno SIZE "$part") < MIN_SIZE_GB * 1024 ** 3)); then
+          error "Bölüm çok küçük: en az ${MIN_SIZE_GB} GB gerekli."
+          sleep 2
+          continue
+        fi
+        MODE=replace PART=$part ESP=$esp
+        ;;
+      *) continue ;;
+    esac
+    if [[ $MODE == wipe ]] && (($(lsblk -bdno SIZE "$DISK") < MIN_SIZE_GB * 1024 ** 3)); then
+      error "Disk çok küçük: en az ${MIN_SIZE_GB} GB gerekli."
+      sleep 2
+      continue
+    fi
+    return
+  done
+}
+
+disk_summary() {
+  case $MODE in
+    wipe) echo "$DISK: BÜTÜN DİSK SİLİNİR (1 GB EFI + nos)" ;;
+    free) echo "$DISK: boş alana yeni bölüm, EFI paylaşılır ($ESP)" ;;
+    replace) echo "$PART SİLİNİR, yerine nos; EFI paylaşılır ($ESP)" ;;
+  esac
+}
+
+summary() {
+  header "Özet"
+  info "İmaj          : $IMAGE" \
+    "Dil           : $LOCALE" \
+    "Klavye        : $KEYMAP" \
+    "Saat dilimi   : $TIMEZONE" \
+    "Bilgisayar adı: $HOSTNAME_VALUE" \
+    "Kullanıcı adı : $USERNAME" \
+    "Görünen ad    : ${FULLNAME:-(yok)}" \
+    "Disk          : $(disk_summary)"
+  echo
+  gum confirm --padding "0 2" --affirmative "Devam" --negative "Baştan başla" "Bilgiler doğru mu?" || return 1
+  # Silinecek şeyi adıyla yazdırarak son onay.
+  local what
+  case $MODE in
+    wipe) what=$(basename "$DISK") ;;
+    replace) what=$(basename "$PART") ;;
+    free) return 0 ;;
+  esac
+  header "Son onay: $what silinecek"
+  local typed
+  typed=$(gum input --padding "0 2" --placeholder "Onaylamak için '$what' yaz") || true
+  [[ "$typed" == "$what" ]]
+}
+
+# --- Uygulama adımları -----------------------------------------------------------------------
+
+partition_path() { lsblk -lnpo PATH,PARTN "$1" | awk -v n="$2" '$2 == n { print $1 }'; }
+
+step_pull() { podman pull "$IMAGE"; }
+
+step_disk() {
+  umount -R "$TARGET" 2>/dev/null || true
+  case $MODE in
+    wipe)
+      wipefs -a "$DISK"
+      sgdisk --zap-all "$DISK"
+      sgdisk -n 1:0:+"$ESP_SIZE" -t 1:ef00 -c 1:EFI -n 2:0:0 -t 2:8304 -c 2:nos "$DISK"
+      udevadm settle
+      ESP=$(partition_path "$DISK" 1)
+      ROOT=$(partition_path "$DISK" 2)
+      mkfs.fat -F 32 -n EFI "$ESP"
+      ;;
+    free)
+      local before after
+      before=$(lsblk -lnpo PATH "$DISK")
+      sgdisk -n "0:$FREE_START:$FREE_END" -t 0:8304 -c 0:nos "$DISK"
+      partprobe "$DISK" 2>/dev/null || true
+      udevadm settle
+      after=$(lsblk -lnpo PATH "$DISK")
+      ROOT=$(comm -13 <(sort <<<"$before") <(sort <<<"$after") | head -n1)
+      [[ -n "$ROOT" ]] || { echo "Yeni bölüm bulunamadı"; return 1; }
+      ;;
+    replace)
+      ROOT=$PART
+      local num
+      num=$(cat "/sys/class/block/$(basename "$PART")/partition")
+      wipefs -a "$PART"
+      sgdisk -t "$num:8304" -c "$num:nos" "$DISK"
+      udevadm settle
+      ;;
+  esac
+  mkfs.btrfs -f -L nos "$ROOT"
+  mount -o compress=zstd:1 "$ROOT" "$TARGET"
+  mkdir -p "$TARGET/boot"
+  mount "$ESP" "$TARGET/boot"
+  local free_esp
+  free_esp=$(df -B1 --output=avail "$TARGET/boot" | tail -n1)
+  if ((free_esp < 300 * 1024 ** 2)); then
+    echo "UYARI: EFI bölümünde $(human "$free_esp") boş yer var; nos'un her sürümü ~80 MB istiyor."
+  fi
+}
+
+step_install() {
+  podman run --rm --privileged --pid=host --security-opt label=type:unconfined_t \
+    -v /var/lib/containers:/var/lib/containers -v /dev:/dev -v "$TARGET:/target" \
+    "$IMAGE" bootc install to-filesystem --composefs-backend --bootloader systemd /target
+}
+
+# bootc composefs: her sistem sürümünün /etc'si state/deploy/<sürüm>/etc, ortak /var
+# state/os/default/var. Taze kurulumda tek sürüm var.
+target_dirs() {
+  local deploy
+  deploy=$(find "$TARGET/state/deploy" -mindepth 1 -maxdepth 1 -type d | head -n1)
+  [[ -n "$deploy" && -d "$deploy/etc" ]] || { echo "Kurulan sistemin /etc'si bulunamadı"; return 1; }
+  T_ETC="$deploy/etc"
+  T_VAR="$TARGET/state/os/default/var"
+  mkdir -p "$T_VAR"
+}
+
+step_config() {
+  # bootc kurulumun sonunda dosya sistemini salt okunur yapıyor (finalize).
+  mount -o remount,rw "$TARGET" && mount -o remount,rw "$TARGET/boot" || return 1
+  target_dirs || return 1
+  echo "LANG=$LOCALE" >"$T_ETC/locale.conf"
+  printf 'KEYMAP=%s\nFONT=eurlatgr\n' "$KEYMAP" >"$T_ETC/vconsole.conf"
+  ln -sfn "../usr/share/zoneinfo/$TIMEZONE" "$T_ETC/localtime"
+  echo "$HOSTNAME_VALUE" >"$T_ETC/hostname"
+  # Açılış menüsü 5 saniye görünsün (Windows'u ya da önceki nos sürümünü seçebilmek için).
+  # bootc "timeout 5" yazmak istiyor ama sadece loader.conf yoksa; systemd-boot önce
+  # satırları kapalı (#) bir loader.conf oluşturduğu için menü hiç görünmüyordu.
+  local conf="$TARGET/boot/loader/loader.conf"
+  if [[ -f "$conf" ]] && ! grep -q '^timeout' "$conf"; then
+    { echo 'timeout 5'; grep -v '^#\?timeout' "$conf"; } >"$conf.new" && mv "$conf.new" "$conf"
+  fi
+  # Ev dizini btrfs alt birimi olsun: snapshot sadece alt birimlerden alınabiliyor.
+  if [[ ! -d "$T_VAR/home" ]]; then
+    btrfs subvolume create "$T_VAR/home" && chmod 0755 "$T_VAR/home"
+  fi
+  # İmajda hâlâ ilk açılış ekranı olan eski sürümler için: kurulum burada yapıldı.
+  mkdir -p "$T_VAR/lib/nos" && touch "$T_VAR/lib/nos/firstboot-done"
+}
+
+# Yeni sistemin içinde (chroot) çalışan kısım: imajın /usr'ı + kurulan sistemin /etc ve
+# /var'ı. Kullanıcıyı ve snapshot ayarını yeni sistemin kendi araçları oluşturur. Şifre
+# komut satırında görünmesin diye standart girdiden gelir.
+CHROOT_SCRIPT='
+set -euo pipefail
+n=/newroot
+mkdir -p $n/usr $n/proc $n/sys $n/dev $n/run $n/tmp
+mount --bind /usr $n/usr
+mount -t proc proc $n/proc
+mount --rbind /sys $n/sys
+mount --rbind /dev $n/dev
+mount -t tmpfs tmpfs $n/run
+mount -t tmpfs tmpfs $n/tmp
+ln -sfn usr/bin $n/bin; ln -sfn usr/bin $n/sbin; ln -sfn usr/lib $n/lib; ln -sfn usr/lib $n/lib64
+chroot $n /usr/bin/bash -euo pipefail -c "
+  systemd-sysusers </dev/null
+  groups=\$(for g in wheel libvirt; do if getent group \$g >/dev/null; then echo -n \$g,; fi; done)
+  shell=/usr/bin/fish; [[ -x \$shell ]] || shell=/usr/bin/bash
+  useradd -m -G \"\${groups%,}\" -s \"\$shell\" -c \"\$FULLNAME\" \"\$USERNAME\" </dev/null
+  chpasswd
+  if [[ \$(stat -c %i /var/home) == 256 ]] && command -v snapper >/dev/null; then
+    snapper --no-dbus -c home create-config /var/home </dev/null
+    snapper --no-dbus -c home set-config TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes \
+      TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2 \
+      TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0 ALLOW_USERS=\"\$USERNAME\" SYNC_ACL=yes
+  fi
+"
+'
+
+step_user() {
+  target_dirs || return 1
+  printf '%s:%s\n' "$USERNAME" "$PASSWORD" |
+    podman run --rm -i --privileged --network none \
+      -e USERNAME="$USERNAME" -e FULLNAME="$FULLNAME" \
+      -v "$T_ETC:/newroot/etc" -v "$T_VAR:/newroot/var" \
+      --entrypoint /usr/bin/bash "$IMAGE" -c "$CHROOT_SCRIPT"
+}
+
+step_finish() {
+  sync
+  umount -R "$TARGET"
+}
+
+# Bir adımı çalıştırır, çıktısını hem ekrana hem günlüğe yazar; hata olursa sorar.
+# Dönüş: 0 = başarılı, 1 = kullanıcı baştan başlamak istedi.
+run_step() {
+  local title="$1" fn="$2" rc
+  while :; do
+    gum style --margin "0 2" --bold ">> $title"
+    "$fn" 2>&1 | tee -a "$LOG"
+    rc=${PIPESTATUS[0]}
+    if ((rc == 0)); then
+      gum style --margin "0 2" --foreground 2 "[tamam] $title"
+      return 0
+    fi
+    error "[HATA] $title başarısız (ayrıntı: $LOG)"
+    if gum confirm --padding "0 2" --affirmative "Tekrar dene" --negative "Baştan başla" "Ne yapılsın?"; then
+      continue
+    fi
+    return 1
+  done
+}
+
+apply_all() {
+  header "Kuruluyor (birkaç dakika sürebilir)"
+  run_step "İmaj indiriliyor" step_pull &&
+    run_step "Disk hazırlanıyor" step_disk &&
+    run_step "Sistem kuruluyor" step_install &&
+    run_step "Ayarlar yazılıyor" step_config &&
+    run_step "Kullanıcı oluşturuluyor" step_user &&
+    run_step "Bitiriliyor" step_finish
+}
+
+# --- Ana akış --------------------------------------------------------------------------------
+
+setfont eurlatgr 2>/dev/null || true
+trap '' INT TSTP
+
+if [[ ! -d /sys/firmware/efi ]]; then
+  header "Bu bilgisayar UEFI ile açılmamış"
+  error "nos sadece UEFI ile kurulabiliyor. BIOS ayarlarından UEFI'yi (ve Secure Boot'u kapalı) seçip tekrar dene."
+  exit 1
+fi
+
+while :; do
+  ask_keymap
+  ask_network
+  ask_image
+  ask_locale
+  ask_timezone
+  ask_hostname
+  ask_username
+  ask_fullname
+  ask_password
+  ask_disk
+  summary || continue
+  apply_all && break
+done
+
+unset PASSWORD
+header "Kurulum bitti"
+gum confirm --padding "0 2" --affirmative "Yeniden başlat" --negative "Kabuğa çık" "USB'yi çıkarıp yeniden başlat." &&
+  systemctl reboot

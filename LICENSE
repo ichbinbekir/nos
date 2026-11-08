@@ -22,8 +22,13 @@ SOFTWARE.
 
 ---
 
-Exceptions (these parts keep their original Apache License 2.0):
+Exceptions (these parts keep their original licenses):
 
-- build_files/bootc/: from bootcrew/mono, see build_files/bootc/LICENSE.
+- build_files/bootc/: from bootcrew/mono, see build_files/bootc/LICENSE
+  (Apache License 2.0).
 - The `rechunk` recipe in Justfile: from ublue-os/image-template
   (https://github.com/ublue-os/image-template), Apache License 2.0.
+- iso/: the archiso profile is derived from archiso's "releng" profile
+  (https://gitlab.archlinux.org/archlinux/archiso), GNU General Public
+  License v3.0 or later. iso/airootfs/usr/local/bin/nos-install is part of
+  this project (MIT).

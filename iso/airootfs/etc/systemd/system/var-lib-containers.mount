@@ -1,0 +1,14 @@
+# İndirilen imaj canlı sistemin küçük yazılabilir alanına değil, RAM'de ayrı bir diske
+# gitsin. tmpfs sadece yazılan kadar RAM kullanıyor; podman'in overlay deposu tmpfs'te
+# çalışıyor (canlı sistemin kendi overlay'inin üstünde çalışmazdı).
+[Unit]
+Description=Kurulum için imaj deposu (RAM)
+
+[Mount]
+What=tmpfs
+Where=/var/lib/containers
+Type=tmpfs
+Options=mode=0700,size=90%
+
+[Install]
+WantedBy=local-fs.target

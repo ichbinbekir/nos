@@ -13,6 +13,9 @@ on:
       - 'cosign.pub'
       - '.gitignore'
       - '.gitattributes'
+      # Kurulum ISO'su; onu build-iso.yml elle build eder.
+      - 'iso/**'
+      - '.github/workflows/build-iso.yml'
       # Sadece bootc imajını ilgilendiren dosyalar; onları build-bootc.yml build eder.
       # İki workflow birbirinden bağımsız: yeni bootc bir sonraki build'de (04:00 ya da elle) alınır.
       - 'build_files/bootc/build-bootc.sh'
@@ -25,6 +28,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'tools/**'
+      - 'iso/**'
   # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
   schedule:
     - cron: '0 4 * * *'

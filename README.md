@@ -53,28 +53,44 @@ Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
 
 ## Kurulum
 
-> [!WARNING]
-> Hedef diskteki her şey silinir.
+Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sadece kurulum için gereken araçlar). Her şey kurulum sırasında sorulur; ilk açılışta hiçbir şey sorulmaz, direkt giriş ekranı gelir.
 
-1. BIOS/UEFI ayarlarından **Secure Boot'u kapat.** Önyükleyici ve NVIDIA sürücüsü imzalı değil.
-2. Herhangi bir canlı USB ile bilgisayarı aç ve `podman`'i kur.
-   - Arch ISO kullanıyorsan açılış menüsünde çekirdek satırının sonuna `cow_spacesize=16G` ekle. Varsayılan 256 MB yazılabilir alan imajı indirmeye yetmiyor. Bu alan RAM'den kullanılıyor.
-3. Hedef diskin adını bul (`lsblk`; örnek: `/dev/nvme0n1`) ve kur:
-   ```
-   sudo podman run --rm --privileged --pid=host \
-     --security-opt label=type:unconfined_t \
-     -v /var/lib/containers:/var/lib/containers -v /dev:/dev \
-     ghcr.io/ichbinbekir/nos-nitro:latest \
-     bootc install to-disk --composefs-backend --bootloader systemd \
-       --filesystem btrfs --wipe /dev/nvme0n1
-   ```
-   Dizüstü (Acer Nitro 16) için `nos-nitro`; makine imajı olmayan bir bilgisayarda `nos`.
-   Dosya sistemi btrfs olmalı (`--filesystem btrfs`): imaj diski zstd ile sıkıştırarak kullanıyor, başka bir dosya sistemiyle açılmaz.
-4. Yeniden başlat. İlk açılışta bir kurulum ekranı gelir ve sırayla saat dilimi, sistem dili, klavye düzeni, bilgisayar adı, kullanıcı adı, görünen ad ve şifre sorulur (ok tuşları ve Enter ile). Sonda bir özet gösterilir; "Kur" denmeden sistemde hiçbir şey değişmez. Bitince giriş ekranı açılır. Kullanıcının kabuğu fish olarak ayarlanır.
+1. BIOS/UEFI ayarlarından **Secure Boot'u kapat.** Önyükleyici ve NVIDIA sürücüsü imzalı değil. nos sadece UEFI ile açılır.
+2. [Releases](https://github.com/ichbinbekir/nos/releases) sayfasından en son `nos-installer-*.iso`'yu indir ve USB'ye yaz (`dd`, Ventoy, Fedora Media Writer vb.). Yeni ISO, GitHub'da **Actions → Build installer ISO → Run workflow** ile üretilir; içinde imaj olmadığı için sık yenilemek gerekmez.
+3. USB'den aç. Kurulum programı kendiliğinden başlar ve sırayla sorar (ok tuşları, Enter; yazarak arama):
+   - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
+   - **imaj:** `nos-nitro` (Acer Nitro 16), `nos` (sürücüsüz temel) ya da `nos`'tan türetilmiş başka bir imajın adresi
+   - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
+   - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür.
+4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
+5. Kurulum imajı internetten indirir (birkaç GB; RAM'e indirildiği için en az ~12 GB RAM gerekli), diski hazırlar, sistemi kurar, ayarları ve kullanıcıyı yazar. Bitince USB'yi çıkarıp yeniden başlat.
 
-`root` hesabı kilitli; yönetici işleri için `sudo` kullanılır (ilk açılışta oluşturulan kullanıcı `sudo` kullanabilir).
+Kullanıcının kabuğu fish; `root` hesabı kilitli, yönetici işleri için `sudo` (kurulumdaki kullanıcı `sudo` kullanabilir). Ev dizininin otomatik snapshot'ları kurulumda ayarlanır.
+
+Kurulum programı: [iso/airootfs/usr/local/bin/nos-install](iso/airootfs/usr/local/bin/nos-install). Varsayılan cevaplar (imaj, dil, kullanıcı adı vb.) dosyanın başında; hepsi kurulumda değiştirilebilir.
+
+<details>
+<summary>Elle kurulum (herhangi bir canlı USB ile)</summary>
+
+Canlı USB'de `podman`'i kur (Arch ISO'da açılış satırına `cow_spacesize=16G` ekle; varsayılan 256 MB yazılabilir alan imajı indirmeye yetmiyor), hedef diski bul (`lsblk`) ve:
+
+```
+sudo podman run --rm --privileged --pid=host \
+  --security-opt label=type:unconfined_t \
+  -v /var/lib/containers:/var/lib/containers -v /dev:/dev \
+  ghcr.io/ichbinbekir/nos-nitro:latest \
+  bootc install to-disk --composefs-backend --bootloader systemd \
+    --filesystem btrfs --wipe /dev/nvme0n1
+```
+
+Dosya sistemi btrfs olmalı: imaj diski zstd ile sıkıştırarak kullanıyor, başka bir dosya sistemiyle açılmaz. Bu yolla kurulunca ilk açılışta kullanıcı ve dil bilgileri sorulur.
+</details>
 
 ### Sanal makinede denemek (VirtualBox)
+
+**Kurulum ISO'suyla:** Yeni bir sanal makine oluştur (Tür: Linux / Arch Linux 64-bit; **Sistem → Anakart → "EFI'yi etkinleştir"** işaretli; en az **12 GB RAM**, 2+ işlemci, en az 40 GB disk; Ekran → VMSVGA), ISO'yu optik sürücüye tak ve aç. Kurulum gerçek bilgisayardakiyle aynı.
+
+**Hazır disk imajıyla** (kurulum ISO'su denendikten sonra kaldırılacak):
 
 1. GitHub'da **Actions → Build disk image → Run workflow** ile biçim olarak `vdi` seç ve çalıştır.
 2. Bitince çalışmanın sayfasındaki **Artifacts** bölümünden `nos-vdi`'yi indir ve zip'i aç.
@@ -170,7 +186,7 @@ Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `ghcr.io/ichbinbekir/
 
 ## Lisans
 
-[MIT](LICENSE). İstisnalar: [build_files/bootc/](build_files/bootc/) ve Justfile'daki `rechunk` tarifi, alındıkları projelerin lisansı olan Apache-2.0 ile kalıyor.
+[MIT](LICENSE). İstisnalar: [build_files/bootc/](build_files/bootc/) ve Justfile'daki `rechunk` tarifi Apache-2.0, [iso/](iso/) profili (Arch'ın archiso `releng` profilinden) GPL-3.0-or-later ile, alındıkları projelerin lisansıyla kalıyor.
 
 ## Teşekkürler
 
