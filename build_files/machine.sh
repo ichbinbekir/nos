@@ -5,9 +5,8 @@
 #   services.txt  etkinleştirilecek servisler (aynı biçim)
 #   system_files/ köke olduğu gibi kopyalanan dosyalar
 #
-# Ortak imaj bootc için son hazırlığı (bootc-rootfs.sh) zaten yaptı; burada sadece yeni
-# paketlerin bıraktıkları toparlanır. initramfs yeniden üretilmiyor: makine paketleri
-# initrd'ye girmemeli (NVIDIA 40-nos-omit.conf ile zaten dışarıda).
+# Ortak imaj bootc için son hazırlığı (bootc-rootfs.sh) zaten yaptı; burada yeni paketler
+# eklenir, açılış dosyası (initramfs) yeniden üretilir ve paketlerin bıraktıkları toparlanır.
 #
 # Kullanım: machine.sh <makine adı>
 
@@ -43,8 +42,14 @@ find /etc -name '*.pacnew' -delete
 # Yeni paketlerin /var klasörleri (ortak imajınkiler nos-var.conf'ta).
 bash /ctx/var-tmpfiles.sh "/usr/lib/tmpfiles.d/nos-var-$machine.conf"
 
-# Sürüm: ortak imajın tarihi makine build'inin tarihiyle değiştirilir (bootc açılış menüsü).
-sed -i "s/^VERSION_ID=.*/VERSION_ID=$(date -u +%Y%m%d)/" /usr/lib/os-release
+# initramfs makinenin paketleriyle yeniden üretilir (ör. intel-ucode işlemci mikrokodunu
+# initrd'nin başına koyuyor). dracut os-release'i initrd'ye kopyaladığı için sürüm (build
+# tarihi) önce çıkarılır, sonra eklenir; yoksa initrd her gün değişir (bkz. Containerfile).
+# dracut geçici dosyaları /var/tmp'ye yazıyor; /var ortak imajda boş.
+sed -i '/^VERSION_ID=/d' /usr/lib/os-release
+mkdir -p /var/tmp
+bash /ctx/bootc/initramfs.sh
+echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
 
 # bootc-rootfs.sh'deki temizliğin paket kurulumundan etkilenen kısmı.
 find /var -mindepth 1 -delete

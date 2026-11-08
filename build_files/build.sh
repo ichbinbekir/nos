@@ -18,7 +18,6 @@ PACKAGES=(
   base
   linux
   linux-firmware
-  intel-ucode
   dracut
   ostree
   bubblewrap
@@ -33,12 +32,7 @@ PACKAGES=(
   glib2
   shadow
 
-  # Grafik. NVIDIA sürücüsü makine imajında (machines/nitro). Intel paketleri (yukarıdaki
-  # intel-ucode dahil) şimdilik ortakta: tek makine Intel ve intel-ucode initramfs'e giriyor,
-  # makine imajı initramfs'i yeniden üretmiyor. AMD'li bir makine gelince yeniden bakılmalı.
-  switcheroo-control # İki ekran kartlı bilgisayarlarda KDE'de sağ tık > "Ayrık grafik kartıyla çalıştır"
-  vulkan-intel # Intel için Vulkan
-  intel-media-driver # Intel ile donanımsal video çözme (VA-API; Broadwell ve sonrası)
+  # İşlemci mikrokodu, ekran kartı ve ses kartı sürücüleri makine imajlarında (machines/).
   zram-generator # Sıkıştırılmış RAM takası (ayarı system_files'ta)
   plymouth # Açılışta yazılar yerine sade animasyon (bgrt teması: üretici logosu + dönen simge). initramfs.sh'den önce kurulu olmalı
 
@@ -62,7 +56,6 @@ PACKAGES=(
   pipewire-alsa
   pipewire-jack
   wireplumber
-  sof-firmware # Intel dahili ses kartı (Sound Open Firmware); bu olmadan ses çalışmıyor
   noto-fonts
   noto-fonts-emoji
 
@@ -145,7 +138,6 @@ systemctl enable \
   bluetooth.service \
   ufw.service \
   power-profiles-daemon.service \
-  switcheroo-control.service \
   systemd-resolved.service \
   systemd-timesyncd.service \
   nos-firstboot.service \

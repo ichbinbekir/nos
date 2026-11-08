@@ -17,14 +17,14 @@ En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bu
 
 | İmaj | İçinde | Ne için |
 |---|---|---|
-| `ghcr.io/ichbinbekir/nos` | Makineden bağımsız her şey; ekran kartı sürücüsü yok | Sanal makine, makine imajlarının temeli |
-| `ghcr.io/ichbinbekir/nos-nitro` | `nos` + Acer Nitro 16'nın sürücüleri ve ayarları (NVIDIA, Acer güç modları) | Dizüstü |
+| `ghcr.io/ichbinbekir/nos` | Makineden bağımsız her şey; işlemci mikrokodu, ekran ve ses kartı sürücüsü yok | Sanal makine, makine imajlarının temeli |
+| `ghcr.io/ichbinbekir/nos-nitro` | `nos` + Acer Nitro 16'nın sürücüleri ve ayarları (Intel mikrokodu ve grafik, ses kartı, NVIDIA, Acer güç modları) | Dizüstü |
 
 Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servisler, ek dosyalar). Yeni bir bilgisayar için oraya bir klasör eklenir; GitHub önce `nos`'u, sonra makine imajlarını aynı anda build eder.
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
-- İşlemci mikrokodu olarak sadece `intel-ucode` var, `amd-ucode` yok.
+- Ortak `nos` imajında işlemci mikrokodu, ekran kartı ve ses kartı sürücüsü yok; bunlar makine imajında. `nos-nitro`'da işlemci mikrokodu olarak sadece `intel-ucode` var, `amd-ucode` yok.
 - Ekran kartı sürücüsü olarak sadece NVIDIA'nın sürücüsü (`nvidia-open`) var; o da sadece `nos-nitro`'da.
 - Tarayıcı olarak sadece **Helium** var (AUR'dan, imajın içinde). Başka hiçbir tarayıcı kurulmuyor.
 - Güvenlik duvarı olarak firewalld yerine daha basit olan **ufw** kullanılıyor.

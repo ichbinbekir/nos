@@ -1,8 +1,19 @@
 # Acer Nitro 16 (AN16-51): Intel i7-13620H + NVIDIA RTX 4050 Laptop, hibrit grafik.
 # Masaüstü Intel ile çalışır, NVIDIA sadece istenen uygulamalarda devreye girer.
 
-# NVIDIA (linux kerneli için önceden derlenmiş). initramfs'e girmiyor (40-nos-omit.conf),
-# bu yüzden makine imajında initramfs yeniden üretilmiyor.
+# İşlemci mikrokodu. Açılış dosyasının (initramfs) başına giriyor; machine.sh initramfs'i
+# makinenin paketleriyle yeniden üretiyor.
+intel-ucode
+
+# Ses kartı: Intel SOF (Sound Open Firmware); bu olmadan dahili ses çalışmıyor.
+sof-firmware
+
+# Intel tümleşik grafik
+vulkan-intel # Vulkan
+intel-media-driver # Donanımsal video çözme (VA-API; Broadwell ve sonrası)
+
+# NVIDIA (linux kerneli için önceden derlenmiş). initramfs'e girmiyor (40-nos-omit.conf).
 nvidia-open
 nvidia-utils
 nvidia-prime # prime-run <uygulama>: uygulamayı NVIDIA ile çalıştırır
+switcheroo-control # KDE'de sağ tık > "Ayrık grafik kartıyla çalıştır"
