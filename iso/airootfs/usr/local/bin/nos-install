@@ -109,9 +109,10 @@ ask_image() {
       done
     fi
     [[ -n "$value" ]] || continue
-    # Sadece bootc imajları kurulabilir (containers.bootc etiketi).
-    if bootc=$(gum spin --title "İmaj kontrol ediliyor..." -- \
-      skopeo inspect --no-tags --format '{{index .Labels "containers.bootc"}}' "docker://$value" 2>&1) &&
+    # Sadece bootc imajları kurulabilir (containers.bootc etiketi). (gum spin komutun
+    # çıktısını yuttuğu için kullanılmıyor.)
+    info "İmaj kontrol ediliyor..."
+    if bootc=$(skopeo inspect --no-tags --format '{{index .Labels "containers.bootc"}}' "docker://$value" 2>&1) &&
       [[ "$bootc" == 1 ]]; then
       IMAGE="$value"
       return
