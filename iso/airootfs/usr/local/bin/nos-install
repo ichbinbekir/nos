@@ -27,7 +27,6 @@ DEFAULT_FULLNAME="Bekir"
 # Hazır imaj seçenekleri ("ad|adres"); listede olmayan bir imaj adresi elle de yazılabilir.
 IMAGES=(
   "nos-nitro (Acer Nitro 16)|ghcr.io/ichbinbekir/nos-nitro:latest"
-  "nos (sürücüsüz temel imaj)|ghcr.io/ichbinbekir/nos:latest"
 )
 
 MIN_SIZE_GB=40 # nos için en az bu kadar yer

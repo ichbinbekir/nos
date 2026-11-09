@@ -42,18 +42,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  IMAGE_NAME: nos
-
 jobs:
-  # Ortak imaj (nos): sürücüsüz, her şeyin geri kalanı. Makine imajları bunun üzerine kurulur.
+  # Önce ortak imaj (nos) build edilir; yayınlanmaz, sadece bu işin içinde kalır. Sonra her
+  # makine imajı (nos-<makine>, machines/ altındaki her klasör) onun üzerine sırayla kurulur,
+  # katmanlara bölünür, yüklenir ve imzalanır. Ortak imaj bir kez build edilir: makineler
+  # ayrı işlerde paralel build edilseydi her biri ortak imajı ya yeniden build edecek ya da
+  # bir yerden indirecekti.
   build:
     runs-on: ubuntu-26.04
-    timeout-minutes: 120
+    timeout-minutes: 150
     env:
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
     outputs:
-      digest: ${{ steps.push.outputs.digest }}
+      machines: ${{ steps.machines.outputs.list }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,6 +71,16 @@ jobs:
           echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
           echo "BOOTC_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc:latest" >> "$GITHUB_ENV"
 
+      # machines/ altındaki her klasör bir makine imajı. Yeni makine için klasör eklemek yeter
+      # (bir de system_files/etc/containers/policy.json'a imaj adı).
+      - name: List machines
+        id: machines
+        run: |
+          list=$(find machines -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rsc 'split("\n") | map(select(. != ""))')
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "MACHINES=$(jq -r 'join(" ")' <<<"$list")" >> "$GITHUB_ENV"
+          echo "Makineler: $list"
+
       # Build sırasında nos-bootc imajı çekildiği için giriş build'den önce yapılır.
       - name: Log in to registry
         env:
@@ -79,28 +90,8 @@ jobs:
           # cosign Docker'ın oturum bilgisini kullanıyor
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build image
+      - name: Build base image
         run: just build
-
-      - name: Rechunk image
-        run: just rechunk
-
-      # Etiketler: latest (sistemlerin takip ettiği) ve YYYYMMDD (eski bir güne dönmek için).
-      # podman, yeni parçaları ilk yüklediğinde katman bilgilerini eksik gönderiyor; ilk push
-      # ile sonrakilerin kimliği (digest) farklı çıkıyor (podman#27796, bootcrew de aynısını
-      # yapıyor). Bu yüzden önce latest iki kez yüklenir, sonra tarih etiketi; hepsi aynı
-      # kimliği taşır ve imza o kimliğe atılır.
-      - name: Push image
-        id: push
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euxo pipefail
-          for tag in latest latest "$(date -u +%Y%m%d)"; do
-            podman push --digestfile=/tmp/digestfile "$IMAGE_NAME:latest" "$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
-            echo "$tag -> $(< /tmp/digestfile)"
-          done
-          echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
-          echo "digest=$(< /tmp/digestfile)" >> "$GITHUB_OUTPUT"
 
       # İmza, SIGNING_SECRET tanımlıysa atılır. Anahtar şifreliyse şifresi
       # COSIGN_PASSWORD secret'ında durur (bkz. README).
@@ -110,123 +101,90 @@ jobs:
         with:
           cosign-release: 'v3.1.2'
 
-      - name: Sign image
-        if: github.event_name != 'pull_request' && env.SIGNING_SECRET != ''
+      # Her makine için: build → katmanlara bölme → yükleme → imza. Bir makine hata verirse
+      # diğerleri yine yüklenir, iş sonunda başarısız sayılır. Pull request'te sadece build
+      # edilir (yükleme yok).
+      #
+      # Etiketler: latest (sistemlerin takip ettiği) ve YYYYMMDD (eski bir güne dönmek için).
+      # podman, yeni parçaları ilk yüklediğinde katman bilgilerini eksik gönderiyor; ilk push
+      # ile sonrakilerin kimliği (digest) farklı çıkıyor (podman#27796, bootcrew de aynısını
+      # yapıyor). Bu yüzden önce latest iki kez yüklenir, sonra tarih etiketi; hepsi aynı
+      # kimliği taşır ve imza o kimliğe atılır.
+      - name: Build, push and sign machine images
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$IMAGE_NAME@$DIGEST"
+          PUBLISH: ${{ github.event_name != 'pull_request' }}
+        run: |
+          # Dıştaki kabuk hatada durmaz (bir makine düşünce diğerleri devam etsin); her makine
+          # kendi alt kabuğunda hatada durur. (if koşulu içindeki alt kabukta set -e
+          # çalışmadığı için sonuç ayrıca alınıyor.)
+          set +e
+          set -uo pipefail
+          failed=()
+          for machine in $MACHINES; do
+            echo "::group::nos-$machine"
+            (
+              set -euxo pipefail
+              image="nos-$machine"
+              BASE_IMAGE=localhost/nos:latest just build-machine "$machine"
+              if [[ $PUBLISH == true ]]; then
+                just rechunk "$image"
+                for tag in latest latest "$(date -u +%Y%m%d)"; do
+                  podman push --digestfile=/tmp/digestfile "$image:latest" "$IMAGE_REGISTRY/$image:$tag"
+                  echo "$tag -> $(< /tmp/digestfile)"
+                done
+                if [[ -n $SIGNING_SECRET ]]; then
+                  cosign sign -y --new-bundle-format=false --use-signing-config=false \
+                    --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$image@$(< /tmp/digestfile)"
+                fi
+              fi
+              # Sıradaki makineye yer açılsın.
+              podman rmi -f "$image:latest"
+            )
+            rc=$?
+            echo "::endgroup::"
+            if ((rc != 0)); then
+              echo "::error::nos-$machine başarısız"
+              failed+=("$machine")
+            fi
+          done
+          ((${#failed[@]} == 0)) || { echo "Başarısız: ${failed[*]}"; exit 1; }
 
+  # Etiketsiz ve eski kayıtları silme, her makine imajı için ayrı (bir şey build etmez).
+  # Makinelerden biri başarısız olsa da diğerlerininki temizlenir.
+  cleanup:
+    needs: build
+    if: always() && github.event_name != 'pull_request' && needs.build.outputs.machines != ''
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: ${{ fromJSON(needs.build.outputs.machines) }}
+    steps:
       # Etiketsiz kayıtları sil: latest'in ilk yüklemesi (podman#27796, yukarıda) ikinci
       # yüklemeyle etiketini kaybedip sahipsiz kalıyor; her build bir tane bırakıyordu.
       # İmzalar eski biçimde (.sig etiketi) olduğu ve imaj tek parça (index değil) olduğu
       # için hiçbir etiketsiz kayıt gerekli değil. Eski imajları silmeden önce çalışır ki
       # 30 kayıt sınırı sadece imaj ve imzaları saysın.
       - name: Delete untagged images
-        if: github.event_name != 'pull_request'
         continue-on-error: true
         uses: actions/delete-package-versions@v5
         with:
-          package-name: ${{ env.IMAGE_NAME }}
+          package-name: nos-${{ matrix.machine }}
           package-type: container
           delete-only-untagged-versions: 'true'
           min-versions-to-keep: 0
 
       # Eski imajları sil: her build bir imaj ve bir imza (.sig) kaydı bırakıyor. Son 30
-      # kayıt (~15 gün) tutulur; o günlere `bootc switch ghcr.io/<sahip>/nos:YYYYMMDD` ile
-      # dönülebilir. Silme başarısız olursa build başarısız sayılmaz.
-      - name: Delete old images
-        if: github.event_name != 'pull_request'
-        continue-on-error: true
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ env.IMAGE_NAME }}
-          package-type: container
-          min-versions-to-keep: 30
-
-  # Makine imajları (nos-<makine>): ortak imajın az önce yüklenen sürümünün (digest) üzerine
-  # machines/<makine>/ eklenir. Makineler birbirini beklemez, aynı anda build edilir.
-  # Pull request'te ortak imaj yüklenmediği için çalışmaz.
-  machine:
-    needs: build
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        machine:
-          - nitro
-    env:
-      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
-      MACHINE_IMAGE: nos-${{ matrix.machine }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
-
-      - name: Install just
-        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
-
-      - name: Set registry
-        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-
-      - name: Log in to registry
-        env:
-          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Build image
-        env:
-          BASE_DIGEST: ${{ needs.build.outputs.digest }}
-        run: BASE_IMAGE="$IMAGE_REGISTRY/$IMAGE_NAME@$BASE_DIGEST" just build-machine "${{ matrix.machine }}"
-
-      - name: Rechunk image
-        run: just rechunk "$MACHINE_IMAGE"
-
-      # Etiketler ve iki kez latest: ortak imajdakiyle aynı sebep (podman#27796).
-      - name: Push image
-        run: |
-          set -euxo pipefail
-          for tag in latest latest "$(date -u +%Y%m%d)"; do
-            podman push --digestfile=/tmp/digestfile "$MACHINE_IMAGE:latest" "$IMAGE_REGISTRY/$MACHINE_IMAGE:$tag"
-            echo "$tag -> $(< /tmp/digestfile)"
-          done
-          echo "DIGEST=$(< /tmp/digestfile)" >> "$GITHUB_ENV"
-
-      - name: Install cosign
-        if: env.SIGNING_SECRET != ''
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          cosign-release: 'v3.1.2'
-
-      - name: Sign image
-        if: env.SIGNING_SECRET != ''
-        env:
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$MACHINE_IMAGE@$DIGEST"
-
-      # Etiketsiz ve eski kayıtları silme: ortak imajdakiyle aynı kurallar.
-      - name: Delete untagged images
-        continue-on-error: true
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ env.MACHINE_IMAGE }}
-          package-type: container
-          delete-only-untagged-versions: 'true'
-          min-versions-to-keep: 0
-
+      # kayıt (~15 gün) tutulur; o günlere `bootc switch ghcr.io/<sahip>/nos-<makine>:YYYYMMDD`
+      # ile dönülebilir. Silme başarısız olursa build başarısız sayılmaz.
       - name: Delete old images
         continue-on-error: true
         uses: actions/delete-package-versions@v5
         with:
-          package-name: ${{ env.MACHINE_IMAGE }}
+          package-name: nos-${{ matrix.machine }}
           package-type: container
           min-versions-to-keep: 30

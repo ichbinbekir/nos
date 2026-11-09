@@ -1,7 +1,8 @@
 # Makine imajı (nos-<makine>): ortak nos imajının üzerine o makinenin sürücülerini ve
 # ayarlarını ekler (build_files/machine.sh, machines/<makine>/). Build bağlamı reponun kökü.
-# CI ortak imajı yükledikten hemen sonra bunu, yüklenen imajın kimliğiyle (digest) build eder.
-ARG BASE_IMAGE=ghcr.io/ichbinbekir/nos:latest
+# Ortak imaj yayınlanmıyor: CI (ve `just build-machine`) aynı yerde az önce build edilen
+# localhost/nos'u kullanır.
+ARG BASE_IMAGE=localhost/nos:latest
 
 FROM scratch AS ctx
 COPY build_files /

@@ -6,15 +6,6 @@
     ],
     "transports": {
         "docker": {
-            "ghcr.io/ichbinbekir/nos": [
-                {
-                    "type": "sigstoreSigned",
-                    "keyPath": "/etc/pki/containers/nos.pub",
-                    "signedIdentity": {
-                        "type": "matchRepository"
-                    }
-                }
-            ],
             "ghcr.io/ichbinbekir/nos-nitro": [
                 {
                     "type": "sigstoreSigned",

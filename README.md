@@ -13,14 +13,16 @@ En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bu
 1. **Hafif.** Masaüstü ve uygulamalar sadece gerçekten kullanılanlardan oluşuyor; Arch isteğe bağlı bağımlılıkları kendiliğinden kurmadığı için gereksiz paket gelmiyor. Ama aşırıya da kaçılmıyor: git, ssh, man sayfaları gibi Linux'ta normalde bulunan ve arada bir gerekebilecek araçlar yerinde.
 2. **Sadece bu projenin sahibine yönelik.** İmaj tek bir kullanıcının bilgisayarları için hazırlanıyor. Şu an tek makine var: **Acer Nitro 16** dizüstü, **Intel Core i7-13620H** işlemci (tümleşik Intel grafikle), **NVIDIA RTX 4050** ekran kartı, 16 GB RAM. Açıkça başka bir donanıma özel olan paketler kurulmuyor.
 
-İki tür imaj var:
+İmaj iki katmandan oluşuyor:
+
+- **`nos` (ortak kısım):** Makineden bağımsız her şey (masaüstü, uygulamalar, ayarlar); ekran ve ses kartı sürücüsü yok. Ayrıca yayınlanmıyor, sadece makine imajlarının temeli.
+- **Makine imajları:** `nos` + o bilgisayarın sürücüleri ve ayarları. Kurulan ve güncellenen imaj bu.
 
 | İmaj | İçinde | Ne için |
 |---|---|---|
-| `ghcr.io/ichbinbekir/nos` | Makineden bağımsız her şey; ekran ve ses kartı sürücüsü yok | Sanal makine, makine imajlarının temeli |
 | `ghcr.io/ichbinbekir/nos-nitro` | `nos` + Acer Nitro 16'nın sürücüleri ve ayarları (Intel grafik, ses kartı, NVIDIA, Acer güç modları) | Dizüstü |
 
-Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servisler, ek dosyalar). Yeni bir bilgisayar için oraya bir klasör eklenir; GitHub önce `nos`'u, sonra makine imajlarını aynı anda build eder.
+Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servisler, ek dosyalar). Yeni bir bilgisayar için oraya bir klasör eklenir. GitHub `nos`'u bir kez build eder, sonra her makine imajını onun üzerine kurup yayınlar.
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
@@ -59,7 +61,7 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
 2. GitHub'da **Actions → Build installer ISO → Run workflow** ile ISO'yu üret, bitince çalışmanın **Artifacts** bölümünden `nos-installer`'ı indir (zip içinde ISO) ve USB'ye yaz (`dd`, Ventoy, Fedora Media Writer vb.). İçinde imaj olmadığı için sık yenilemek gerekmez. (Denemeler bitince ISO Releases'e de konacak.)
 3. USB'den aç. Kurulum programı kendiliğinden başlar ve sırayla sorar (ok tuşları, Enter; yazarak arama):
    - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
-   - **imaj:** `nos-nitro` (Acer Nitro 16), `nos` (sürücüsüz temel) ya da `nos`'tan türetilmiş başka bir imajın adresi
+   - **imaj:** `nos-nitro` (Acer Nitro 16) ya da `nos`'tan türetilmiş başka bir imajın adresi
    - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
    - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür. (Boş alana ve bölümün yerine kurulum henüz denenmedi; önemli verisi olan bir diskte önce yedek al.)
 4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
@@ -88,20 +90,7 @@ Dosya sistemi btrfs olmalı: imaj diski zstd ile sıkıştırarak kullanıyor, b
 
 ### Sanal makinede denemek (VirtualBox)
 
-**Kurulum ISO'suyla:** Yeni bir sanal makine oluştur (Tür: Linux / Arch Linux 64-bit; **Sistem → Anakart → "EFI'yi etkinleştir"** işaretli; en az **4 GB RAM**, 2+ işlemci, en az 40 GB disk; Ekran → VMSVGA), ISO'yu optik sürücüye tak ve aç. Kurulum gerçek bilgisayardakiyle aynı.
-
-**Hazır disk imajıyla** (kurulum ISO'su denendikten sonra kaldırılacak):
-
-1. GitHub'da **Actions → Build disk image → Run workflow** ile biçim olarak `vdi` seç ve çalıştır.
-2. Bitince çalışmanın sayfasındaki **Artifacts** bölümünden `nos-vdi`'yi indir ve zip'i aç.
-3. VirtualBox'ta yeni bir sanal makine oluştur:
-   - Tür: Linux, sürüm: Arch Linux (64-bit)
-   - Disk: "Var olan bir sanal sabit disk dosyası kullan" → `disk.vdi`
-   - **Sistem → Anakart → "EFI'yi etkinleştir" işaretli olmalı.** Önyükleyici sadece EFI ile çalışıyor; işaretli değilse sistem açılmaz.
-   - En az 4 GB RAM, 2 işlemci. Ekran → Grafik denetleyicisi: VMSVGA.
-4. Aç. İlk açılış adımları yukarıdaki 4. adımla aynı.
-
-Disk imajı ortak `nos` imajından üretiliyor (NVIDIA sürücüsü yok); ekran VirtualBox'ın kendi grafik sürücüsüyle çalışır, masaüstü biraz yavaş olabilir. Disk 20 GB.
+**Kurulum ISO'suyla:** Yeni bir sanal makine oluştur (Tür: Linux / Arch Linux 64-bit; **Sistem → Anakart → "EFI'yi etkinleştir"** işaretli; en az **4 GB RAM**, 2+ işlemci, en az 40 GB disk; Ekran → VMSVGA), ISO'yu optik sürücüye tak ve aç. Kurulum gerçek bilgisayardakiyle aynı. İmaj olarak `nos-nitro` kurulabilir: sanal makinede NVIDIA kartı olmadığı için NVIDIA servisleri hata yazar, bu normal; ekran sanal makinenin kendi grafik sürücüsüyle çalışır.
 
 ## Kullanım
 
@@ -109,7 +98,7 @@ Disk imajı ortak `nos` imajından üretiliyor (NVIDIA sürücüsü yok); ekran 
 |---|---|
 | Güncelle (yeniden başlatınca uygulanır) | `sudo bootc upgrade` |
 | Önceki sürüme dön | `sudo bootc rollback` |
-| Belirli bir günün sürümüne geç (son ~15 gün) | `sudo bootc switch ghcr.io/ichbinbekir/nos-nitro:YYYYMMDD` (geri: `...nos-nitro:latest`; sanal makinede `nos`) |
+| Belirli bir günün sürümüne geç (son ~15 gün) | `sudo bootc switch ghcr.io/ichbinbekir/nos-nitro:YYYYMMDD` (geri: `...nos-nitro:latest`) |
 | Hangi sürümdeyim | `sudo bootc status` |
 | Güncelleme var mı (indirmeden) | `sudo bootc upgrade --check` |
 | Otomatik güncellemeyi bu oturumda durdur | `sudo systemctl stop nos-update.timer` |
@@ -196,7 +185,7 @@ Snapshot ayarını ilk kurulum ekranı yapıyor; `switch` ile gelen sistemlerde 
 cosign verify --key cosign.pub ghcr.io/ichbinbekir/nos-nitro:latest
 ```
 
-Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `ghcr.io/ichbinbekir/nos` ve `nos-nitro` imajları bu anahtarla imzalı değilse güncelleme reddedilir (`/etc/containers/policy.json`). Diğer imajlar (Distrobox, podman) bundan etkilenmez.
+Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `nos-nitro` imajı bu anahtarla imzalı değilse güncelleme reddedilir (`/etc/containers/policy.json`). Diğer imajlar (Distrobox, podman) bundan etkilenmez.
 
 ## Lisans
 
