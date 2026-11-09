@@ -4,11 +4,11 @@
 # Akış: Önce bütün sorular sorulur (ağ, imaj, dil, klavye, saat dilimi, bilgisayar adı,
 # kullanıcı, şifre, disk), sonra özet gösterilip onay alınır. Onaydan önce diske hiçbir şey
 # yazılmaz. Sonra:
-#   1. İmaj indirilir (podman, RAM'deki /var/lib/containers'a).
-#   2. Disk hazırlanır: ya bütün disk (1 GB EFI + btrfs) ya da Windows vb. korunarak boş
+#   1. Disk hazırlanır: ya bütün disk (1 GB EFI + btrfs) ya da Windows vb. korunarak boş
 #      alana / seçilen bir bölüme btrfs. EFI bölümü diskteki mevcut olansa paylaşılır;
 #      systemd-boot aynı EFI'deki Windows'u menüye kendisi ekler.
-#   3. bootc install to-filesystem (imajın kendi içinden, podman ile).
+#   2. İmaj hedef diskteki geçici bir alt birime indirilir (aşağıda STORE).
+#   3. bootc install to-filesystem (imajın kendi içinden, podman ile); geçici alt birim silinir.
 #   4. Yeni sistemin ayarları yazılır: /etc (bootc composefs: state/deploy/<sürüm>/etc) ve
 #      /var (state/os/default/var). Kullanıcı, şifre ve snapshot ayarı yeni sistemin kendi
 #      araçlarıyla, chroot içinde (yeni sistemin /etc ve /var'ı + imajın /usr'ı).
@@ -35,6 +35,12 @@ ESP_SIZE=1G    # Bütün disk kurulumunda EFI bölümü (birkaç sistem sürüm�
 ESP_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
 MSR_TYPE=e3c9e316-0b5c-4db8-817d-f92df00215ae
 TARGET=/mnt
+# İmaj RAM'e değil, hedef diskte geçici bir btrfs alt birimine iniyor. bootc boş olmayan bir
+# kök dosya sistemine kurmuyor ama içindeki ayrı bağlanmış klasörleri (mount point) yok
+# sayıyor (install.rs require_empty_rootdir; örneği de /var/lib/containers). Alt birim
+# kendi üzerine bağlanıp bağlantı noktası yapılır, kurulumdan sonra silinir.
+STORE="$TARGET/var/lib/containers"
+PODMAN=(podman --root "$STORE/storage" --runroot /run/nos-install/containers)
 LOG=/root/nos-install.log
 ACCENT=4
 
@@ -333,9 +339,9 @@ summary() {
 partition_path() { lsblk -lnpo PATH,PARTN "$1" | awk -v n="$2" '$2 == n { print $1 }'; }
 
 step_pull() {
-  # Geçici dosyalar da RAM diskine (containers.conf.d/50-nos-installer.conf ile aynı yer).
-  mkdir -p /var/lib/containers/tmp
-  TMPDIR=/var/lib/containers/tmp podman pull "$IMAGE"
+  # podman indirdiklerini önce geçici bir klasöre yazıyor; o da hedef diske.
+  mkdir -p "$STORE/tmp"
+  TMPDIR="$STORE/tmp" "${PODMAN[@]}" pull "$IMAGE"
 }
 
 step_disk() {
@@ -373,6 +379,9 @@ step_disk() {
   mount -o compress=zstd:1 "$ROOT" "$TARGET"
   mkdir -p "$TARGET/boot"
   mount "$ESP" "$TARGET/boot"
+  mkdir -p "$TARGET/var/lib"
+  btrfs subvolume create "$STORE"
+  mount --bind "$STORE" "$STORE"
   local free_esp
   free_esp=$(df -B1 --output=avail "$TARGET/boot" | tail -n1)
   if ((free_esp < 300 * 1024 ** 2)); then
@@ -381,8 +390,8 @@ step_disk() {
 }
 
 step_install() {
-  podman run --rm --privileged --pid=host --security-opt label=type:unconfined_t \
-    -v /var/lib/containers:/var/lib/containers -v /dev:/dev -v "$TARGET:/target" \
+  "${PODMAN[@]}" run --rm --privileged --pid=host --security-opt label=type:unconfined_t \
+    -v "$STORE:/var/lib/containers" -v /dev:/dev -v "$TARGET:/target" \
     "$IMAGE" bootc install to-filesystem --composefs-backend --bootloader systemd /target
 }
 
@@ -475,10 +484,18 @@ chroot $n /usr/bin/bash -euo pipefail -c "
 step_user() {
   target_dirs || return 1
   printf '%s:%s\n' "$USERNAME" "$PASSWORD" |
-    podman run --rm -i --privileged --network none \
+    "${PODMAN[@]}" run --rm -i --privileged --network none \
       -e USERNAME="$USERNAME" -e FULLNAME="$FULLNAME" \
       -v "$T_ETC:/newroot/etc" -v "$T_VAR:/newroot/var" \
       --entrypoint /usr/bin/bash "$IMAGE" -c "$CHROOT_SCRIPT"
+}
+
+# Geçici imaj deposu silinir; yeni sistemde iz kalmaz (bootc'nin composefs düzeninde kökte
+# /var yok, kurulu sistemin /var'ı state/os/default/var).
+step_cleanup() {
+  umount -R "$STORE" 2>/dev/null || true
+  btrfs subvolume delete "$STORE" &&
+    rm -rf "$TARGET/var"
 }
 
 step_finish() {
@@ -508,11 +525,12 @@ run_step() {
 
 apply_all() {
   header "Kuruluyor (birkaç dakika sürebilir)"
-  run_step "İmaj indiriliyor" step_pull &&
-    run_step "Disk hazırlanıyor" step_disk &&
+  run_step "Disk hazırlanıyor" step_disk &&
+    run_step "İmaj indiriliyor" step_pull &&
     run_step "Sistem kuruluyor" step_install &&
     run_step "Ayarlar yazılıyor" step_config &&
     run_step "Kullanıcı oluşturuluyor" step_user &&
+    run_step "Geçici dosyalar siliniyor" step_cleanup &&
     run_step "Bitiriliyor" step_finish
 }
 
