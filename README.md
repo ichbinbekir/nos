@@ -123,14 +123,14 @@ Disk imajı ortak `nos` imajından üretiliyor (NVIDIA sürücüsü yok); ekran 
 Tuşlar sadece belirli bir uygulamanın penceresi öndeyken değiştirilebilir. Örnek: Roblox (Sober) WASD'yi zorunlu tutuyor; ESDF ile oynamak için `~/.config/keyd/app.conf`:
 
 ```
-[org.vinegarhq.sober]
+[*sober*]
 e = w
 s = a
 d = s
 f = d
 ```
 
-Sonra oturumu kapatıp aç (eşlemeleri oturum açılışında `keyd-application-mapper` başlatıyor). Pencerenin adını öğrenmek için: `keyd-application-mapper -v` (pencereler arasında geçiş yaptıkça adlarını yazar). Kullanıcı `keyd` grubunda olmalı (kurulum programı ekliyor). Bütün sistemde geçerli eşlemeler `/etc/keyd/` altında (bkz. `man keyd`).
+Sonra oturumu kapatıp aç (eşlemeleri oturum açılışında `keyd-application-mapper` başlatıyor). Köşeli parantezin içi pencere adı; araç adları küçük harfe çevirip harf ve rakam dışındaki her şeyi `-` yapıyor (`org.vinegarhq.Sober` → `org-vinegarhq-sober`), `*` herhangi bir şey demek. Pencerenin adını öğrenmek için: `keyd-application-mapper -v` (pencereler arasında geçiş yaptıkça adlarını yazar; çalışan kopyası varsa önce `pkill -f keyd-application-mapper`). Kullanıcı `keyd` grubunda olmalı (kurulum programı ekliyor). Bütün sistemde geçerli eşlemeler `/etc/keyd/` altında (bkz. `man keyd`).
 
 Açılış yazılar yerine sade bir animasyonla geçer; yazıları görmek için açılırken Esc'ye bas.
 
