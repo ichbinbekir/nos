@@ -23,7 +23,7 @@ DEFAULT_KEYMAP=trq
 DEFAULT_TIMEZONE=Europe/Istanbul
 DEFAULT_HOSTNAME=billmonster
 DEFAULT_USERNAME=bekir
-DEFAULT_FULLNAME="Bekir Ün"
+DEFAULT_FULLNAME="Bekir"
 # Hazır imaj seçenekleri ("ad|adres"); listede olmayan bir imaj adresi elle de yazılabilir.
 IMAGES=(
   "nos-nitro (Acer Nitro 16)|ghcr.io/ichbinbekir/nos-nitro:latest"
@@ -332,7 +332,11 @@ summary() {
 
 partition_path() { lsblk -lnpo PATH,PARTN "$1" | awk -v n="$2" '$2 == n { print $1 }'; }
 
-step_pull() { podman pull "$IMAGE"; }
+step_pull() {
+  # Geçici dosyalar da RAM diskine (containers.conf.d/50-nos-installer.conf ile aynı yer).
+  mkdir -p /var/lib/containers/tmp
+  TMPDIR=/var/lib/containers/tmp podman pull "$IMAGE"
+}
 
 step_disk() {
   umount -R "$TARGET" 2>/dev/null || true
