@@ -258,9 +258,9 @@ apply_snapper() {
 
 apply_user() {
   if getent passwd "$USERNAME" >/dev/null; then
-    usermod -a -G wheel,libvirt -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+    usermod -a -G wheel,libvirt,keyd -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
   else
-    useradd -m -G wheel,libvirt -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
+    useradd -m -G wheel,libvirt,keyd -s /usr/bin/fish -c "$FULLNAME" "$USERNAME"
   fi
 }
 apply_password() { printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; }

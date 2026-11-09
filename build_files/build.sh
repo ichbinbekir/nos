@@ -106,6 +106,8 @@ PACKAGES=(
   podman
   python
   gum # İlk kurulum ekranının (nos-firstboot) arayüzü
+  keyd # Tuş eşleme; pencereye göre de olabiliyor (ör. Sober/Roblox'ta ESDF → WASD). Ayarı ~/.config/keyd/app.conf, bkz. README
+  python-dbus # keyd-application-mapper'ın KDE'de hangi pencerenin önde olduğunu öğrenmesi için
   gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
 
   # Sanallaştırma (QEMU/KVM)
@@ -151,6 +153,7 @@ systemctl enable \
   snapper-timeline.timer \
   snapper-cleanup.timer \
   libvirtd.socket \
+  keyd.service \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 

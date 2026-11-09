@@ -431,7 +431,7 @@ mount -t tmpfs tmpfs $n/tmp
 ln -sfn usr/bin $n/bin; ln -sfn usr/bin $n/sbin; ln -sfn usr/lib $n/lib; ln -sfn usr/lib $n/lib64
 chroot $n /usr/bin/bash -euo pipefail -c "
   systemd-sysusers </dev/null
-  groups=\$(for g in wheel libvirt; do if getent group \$g >/dev/null; then echo -n \$g,; fi; done)
+  groups=\$(for g in wheel libvirt keyd; do if getent group \$g >/dev/null; then echo -n \$g,; fi; done)
   shell=/usr/bin/fish; [[ -x \$shell ]] || shell=/usr/bin/bash
   useradd -m -G \"\${groups%,}\" -s \"\$shell\" -c \"\$FULLNAME\" \"\$USERNAME\" </dev/null
   chpasswd

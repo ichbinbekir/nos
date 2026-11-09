@@ -118,6 +118,20 @@ Disk imajı ortak `nos` imajından üretiliyor (NVIDIA sürücüsü yok); ekran 
 
 İmaj her gün otomatik olarak yeniden build ediliyor; Arch paketlerindeki güncellemeler bu yolla geliyor. Sistem de güncellemeleri kendisi kontrol ediyor (açılıştan 10 dakika sonra, sonra her 6 saatte bir): yeni sürümü arka planda indirip hazırlıyor, bilgisayarı yeniden başlatmıyor. Hazırlanan sürüm bir sonraki açılışta devreye giriyor. Elle `sudo bootc upgrade` yapmak gerekmiyor; hemen kontrol etmek istersen kullanabilirsin.
 
+### Tuş eşleme (keyd)
+
+Tuşlar sadece belirli bir uygulamanın penceresi öndeyken değiştirilebilir. Örnek: Roblox (Sober) WASD'yi zorunlu tutuyor; ESDF ile oynamak için `~/.config/keyd/app.conf`:
+
+```
+[org.vinegarhq.sober]
+e = w
+s = a
+d = s
+f = d
+```
+
+Sonra oturumu kapatıp aç (eşlemeleri oturum açılışında `keyd-application-mapper` başlatıyor). Pencerenin adını öğrenmek için: `keyd-application-mapper -v` (pencereler arasında geçiş yaptıkça adlarını yazar). Kullanıcı `keyd` grubunda olmalı (kurulum programı ekliyor). Bütün sistemde geçerli eşlemeler `/etc/keyd/` altında (bkz. `man keyd`).
+
 Açılış yazılar yerine sade bir animasyonla geçer; yazıları görmek için açılırken Esc'ye bas.
 
 Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini ilk kurulum ekranı ayarlıyor. `bootc switch` ile gelen sistemlerde menü görünmüyorsa EFI bölümünü (`lsblk -f`'te `vfat` olan, ör. `/dev/sda2`) geçici olarak bağlayıp ayarı yaz:

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Oturum açılışında keyd-application-mapper'ı başlatır; kullanıcı pencereye göre bir eşleme
+# tanımlamadıysa (~/.config/keyd/app.conf yoksa) hiçbir şey yapmaz. Kullanıcı keyd grubunda
+# olmalı (keyd'nin soketine erişim; kurulum programı ekliyor).
+[ -f "$HOME/.config/keyd/app.conf" ] || exit 0
+exec keyd-application-mapper

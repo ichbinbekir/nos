@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=keyd application mapper
+Comment=Pencereye göre tuş eşlemeleri (sadece ~/.config/keyd/app.conf varsa)
+Exec=sh /usr/libexec/nos-keyd-application-mapper
+NoDisplay=true
+X-KDE-autostart-phase=2
