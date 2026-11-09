@@ -12,6 +12,7 @@ networkmanager
 wireless-regdb
 
 # Kurulum
+zram-generator
 podman
 skopeo
 gum

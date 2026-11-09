@@ -63,7 +63,7 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
    - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
    - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür.
 4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
-5. Kurulum imajı internetten indirir (birkaç GB; RAM'e indirildiği için en az ~12 GB RAM gerekli), diski hazırlar, sistemi kurar, ayarları ve kullanıcıyı yazar. Bitince USB'yi çıkarıp yeniden başlat.
+5. Kurulum imajı internetten indirir (birkaç GB; RAM'e sıkıştırılarak indirildiği için en az ~8 GB RAM gerekli), diski hazırlar, sistemi kurar, ayarları ve kullanıcıyı yazar. Bitince USB'yi çıkarıp yeniden başlat.
 
 Kullanıcının kabuğu fish; `root` hesabı kilitli, yönetici işleri için `sudo` (kurulumdaki kullanıcı `sudo` kullanabilir). Ev dizininin otomatik snapshot'ları kurulumda ayarlanır.
 
@@ -88,7 +88,7 @@ Dosya sistemi btrfs olmalı: imaj diski zstd ile sıkıştırarak kullanıyor, b
 
 ### Sanal makinede denemek (VirtualBox)
 
-**Kurulum ISO'suyla:** Yeni bir sanal makine oluştur (Tür: Linux / Arch Linux 64-bit; **Sistem → Anakart → "EFI'yi etkinleştir"** işaretli; en az **12 GB RAM**, 2+ işlemci, en az 40 GB disk; Ekran → VMSVGA), ISO'yu optik sürücüye tak ve aç. Kurulum gerçek bilgisayardakiyle aynı.
+**Kurulum ISO'suyla:** Yeni bir sanal makine oluştur (Tür: Linux / Arch Linux 64-bit; **Sistem → Anakart → "EFI'yi etkinleştir"** işaretli; en az **8 GB RAM**, 2+ işlemci, en az 40 GB disk; Ekran → VMSVGA), ISO'yu optik sürücüye tak ve aç. Kurulum gerçek bilgisayardakiyle aynı.
 
 **Hazır disk imajıyla** (kurulum ISO'su denendikten sonra kaldırılacak):
 
