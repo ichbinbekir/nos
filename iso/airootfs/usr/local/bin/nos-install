@@ -397,12 +397,35 @@ target_dirs() {
   mkdir -p "$T_VAR"
 }
 
+# Grafik oturumun (SDDM, KWin) klavye düzeni: localectl'in yazdığı dosyanın aynısı.
+# Metin ekranı düzeni grafik karşılığına systemd'nin eşleme tablosuyla çevrilir
+# (ör. trq → tr, trf → tr/f). Tabloda yoksa dosya yazılmaz.
+write_x11_keymap() {
+  local map=/usr/share/systemd/kbd-model-map layout model variant options
+  read -r _ layout model variant options _ < <(awk -v k="$KEYMAP" '$1 == k' "$map")
+  # Tabloda olmayan ama listede sunduğumuz düzen.
+  [[ -z "$layout" && "$KEYMAP" == trf ]] && layout=tr model=pc105 variant=f options=-
+  [[ -n "$layout" ]] || return 0
+  mkdir -p "$T_ETC/X11/xorg.conf.d"
+  {
+    echo 'Section "InputClass"'
+    echo '        Identifier "system-keyboard"'
+    echo '        MatchIsKeyboard "on"'
+    echo "        Option \"XkbLayout\" \"$layout\""
+    if [[ "$model" != - ]]; then echo "        Option \"XkbModel\" \"$model\""; fi
+    if [[ "$variant" != - ]]; then echo "        Option \"XkbVariant\" \"$variant\""; fi
+    if [[ "$options" != - ]]; then echo "        Option \"XkbOptions\" \"$options\""; fi
+    echo 'EndSection'
+  } >"$T_ETC/X11/xorg.conf.d/00-keyboard.conf"
+}
+
 step_config() {
   # bootc kurulumun sonunda dosya sistemini salt okunur yapıyor (finalize).
   mount -o remount,rw "$TARGET" && mount -o remount,rw "$TARGET/boot" || return 1
   target_dirs || return 1
   echo "LANG=$LOCALE" >"$T_ETC/locale.conf"
   printf 'KEYMAP=%s\nFONT=eurlatgr\n' "$KEYMAP" >"$T_ETC/vconsole.conf"
+  write_x11_keymap
   ln -sfn "../usr/share/zoneinfo/$TIMEZONE" "$T_ETC/localtime"
   echo "$HOSTNAME_VALUE" >"$T_ETC/hostname"
   # Açılış menüsü 5 saniye görünsün (Windows'u ya da önceki nos sürümünü seçebilmek için).
