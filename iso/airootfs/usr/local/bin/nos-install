@@ -39,8 +39,15 @@ TARGET=/mnt
 # kök dosya sistemine kurmuyor ama içindeki ayrı bağlanmış klasörleri (mount point) yok
 # sayıyor (install.rs require_empty_rootdir; örneği de /var/lib/containers). Alt birim
 # kendi üzerine bağlanıp bağlantı noktası yapılır, kurulumdan sonra silinir.
+# Aynı alt birim canlı sistemin /var/lib/containers'ına da bağlanır ve podman varsayılan
+# yollarıyla çalışır: bootc imajı canlı sistemin podman deposunda arıyor (kapsayıcının
+# /var/lib/containers'ının üzerine canlı sistemdekini bağlıyor, install.rs
+# ensure_mirrored_host_mount). Orası USB'nin geçici dosya sisteminde (overlayfs) kalırsa
+# podman açılmıyordu ("'overlay' is not supported over overlayfs"). --root ile başka bir yol
+# verilemiyor: podman veritabanı deponun yolunu kaydediyor, farklı yoldan açılmıyor.
 STORE="$TARGET/var/lib/containers"
-PODMAN=(podman --root "$STORE/storage" --runroot /run/nos-install/containers)
+HOST_STORE=/var/lib/containers
+PODMAN=(podman)
 LOG=/root/nos-install.log
 ACCENT=4
 
@@ -101,11 +108,15 @@ ask_network() {
 }
 
 ask_image() {
-  local entry labels=() choice value="${IMAGE:-$DEFAULT_IMAGE}" bootc
-  for entry in "${IMAGES[@]}"; do labels+=("${entry%%|*}"); done
+  local entry labels=() choice value="${IMAGE:-$DEFAULT_IMAGE}" bootc selected="Başka bir imaj adresi..."
+  for entry in "${IMAGES[@]}"; do
+    labels+=("${entry%%|*}")
+    [[ "${entry#*|}" == "$value" ]] && selected="${entry%%|*}"
+  done
   while :; do
     header "Kurulacak imaj"
-    choice=$(choose "${labels[@]}" "Başka bir imaj adresi...")
+    # Baştan başlanınca önceki seçim işaretli gelir.
+    choice=$(choose --selected "$selected" "${labels[@]}" "Başka bir imaj adresi...")
     if [[ "$choice" == "Başka bir imaj adresi..." ]]; then
       header "İmaj adresi (ör. ghcr.io/kullanici/imaj:latest)"
       value=$(gum input --padding "0 2" --value "$value" --width 70) || true
@@ -328,10 +339,16 @@ summary() {
     replace) what=$(basename "$PART") ;;
     free) return 0 ;;
   esac
-  header "Son onay: $what silinecek"
+  # Yanlış yazılırsa uyarıp tekrar sorulur; boş bırakılırsa (ya da Esc) baştan başlanır.
   local typed
-  typed=$(gum input --padding "0 2" --placeholder "Onaylamak için '$what' yaz") || true
-  [[ "$typed" == "$what" ]]
+  while :; do
+    header "Son onay: $what silinecek"
+    typed=$(gum input --padding "0 2" --placeholder "Onaylamak için '$what' yaz, vazgeçmek için boş bırak") || true
+    [[ -z "$typed" ]] && return 1
+    [[ "$typed" == "$what" ]] && return 0
+    error "'$typed' yazıldı, '$what' bekleniyordu."
+    sleep 2
+  done
 }
 
 # --- Uygulama adımları -----------------------------------------------------------------------
@@ -340,11 +357,13 @@ partition_path() { lsblk -lnpo PATH,PARTN "$1" | awk -v n="$2" '$2 == n { print 
 
 step_pull() {
   # podman indirdiklerini önce geçici bir klasöre yazıyor; o da hedef diske.
-  mkdir -p "$STORE/tmp"
-  TMPDIR="$STORE/tmp" "${PODMAN[@]}" pull "$IMAGE"
+  mkdir -p "$HOST_STORE/tmp"
+  TMPDIR="$HOST_STORE/tmp" "${PODMAN[@]}" pull "$IMAGE"
 }
 
 step_disk() {
+  # Önceki (yarım kalmış) denemeden kalan bağlantılar.
+  umount "$HOST_STORE" 2>/dev/null || true
   umount -R "$TARGET" 2>/dev/null || true
   case $MODE in
     wipe)
@@ -382,6 +401,8 @@ step_disk() {
   mkdir -p "$TARGET/var/lib"
   btrfs subvolume create "$STORE"
   mount --bind "$STORE" "$STORE"
+  mkdir -p "$HOST_STORE"
+  mount --bind "$STORE" "$HOST_STORE"
   local free_esp
   free_esp=$(df -B1 --output=avail "$TARGET/boot" | tail -n1)
   if ((free_esp < 300 * 1024 ** 2)); then
@@ -389,10 +410,14 @@ step_disk() {
   fi
 }
 
+# --skip-finalize: bootc sonunda kök dosya sistemini salt okunur yapmaya çalışıyor; imaj
+# kapsayıcısı aynı diskte hâlâ çalışırken "mount point is busy" ile düşüyordu. Diski sonra
+# kurulum programı kendisi ayırıyor (step_finish).
 step_install() {
   "${PODMAN[@]}" run --rm --privileged --pid=host --security-opt label=type:unconfined_t \
-    -v "$STORE:/var/lib/containers" -v /dev:/dev -v "$TARGET:/target" \
-    "$IMAGE" bootc install to-filesystem --composefs-backend --bootloader systemd /target
+    -v "$HOST_STORE:/var/lib/containers" -v /dev:/dev -v "$TARGET:/target" \
+    "$IMAGE" bootc install to-filesystem --composefs-backend --bootloader systemd \
+    --skip-finalize /target
 }
 
 # bootc composefs: her sistem sürümünün /etc'si state/deploy/<sürüm>/etc, ortak /var
@@ -429,8 +454,6 @@ write_x11_keymap() {
 }
 
 step_config() {
-  # bootc kurulumun sonunda dosya sistemini salt okunur yapıyor (finalize).
-  mount -o remount,rw "$TARGET" && mount -o remount,rw "$TARGET/boot" || return 1
   target_dirs || return 1
   echo "LANG=$LOCALE" >"$T_ETC/locale.conf"
   printf 'KEYMAP=%s\nFONT=eurlatgr\n' "$KEYMAP" >"$T_ETC/vconsole.conf"
@@ -493,6 +516,7 @@ step_user() {
 # Geçici imaj deposu silinir; yeni sistemde iz kalmaz (bootc'nin composefs düzeninde kökte
 # /var yok, kurulu sistemin /var'ı state/os/default/var).
 step_cleanup() {
+  umount "$HOST_STORE" 2>/dev/null || true
   umount -R "$STORE" 2>/dev/null || true
   btrfs subvolume delete "$STORE" &&
     rm -rf "$TARGET/var"

@@ -61,7 +61,7 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
    - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
    - **imaj:** `nos-nitro` (Acer Nitro 16), `nos` (sürücüsüz temel) ya da `nos`'tan türetilmiş başka bir imajın adresi
    - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
-   - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür.
+   - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür. (Boş alana ve bölümün yerine kurulum henüz denenmedi; önemli verisi olan bir diskte önce yedek al.)
 4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
 5. Kurulum diski hazırlar, imajı internetten hedef diske indirir (birkaç GB; kurulum bitince silinir), sistemi kurar, ayarları ve kullanıcıyı yazar. 4 GB RAM yeter. Bitince USB'yi çıkarıp yeniden başlat.
 
