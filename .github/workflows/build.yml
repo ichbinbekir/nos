@@ -8,6 +8,7 @@ on:
       # İmajın içeriğini değiştirmeyen dosyalar
       - '**.md'
       - 'docs/**'
+      - 'dotfiles/**'
       - 'tools/**'
       - 'LICENSE'
       - 'cosign.pub'
@@ -28,6 +29,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'tools/**'
+      - 'dotfiles/**'
       - 'iso/**'
   # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
   schedule:

@@ -121,7 +121,7 @@ f = d
 
 Sonra oturumu kapatıp aç (eşlemeleri oturum açılışında `keyd-application-mapper` başlatıyor). Köşeli parantezin içi pencere adı; araç adları küçük harfe çevirip harf ve rakam dışındaki her şeyi `-` yapıyor (`org.vinegarhq.Sober` → `org-vinegarhq-sober`), `*` herhangi bir şey demek. Pencerenin adını öğrenmek için: `keyd-application-mapper -v` (pencereler arasında geçiş yaptıkça adlarını yazar; çalışan kopyası varsa önce `pkill -f keyd-application-mapper`). Kullanıcı `keyd` grubunda olmalı (kurulum programı ekliyor). Bütün sistemde geçerli eşlemeler `/etc/keyd/` altında (bkz. `man keyd`).
 
-Eşlemeyi oyun içinde bir tuşla geçici kapatmak (ör. sohbete yazarken) için imajda boş bir `nomap` katmanı var: o katman açıkken eşlenen tuşlar normal yazar. Örnek: `.` (nokta) açıp kapatsın:
+Eşlemeyi oyun içinde bir tuşla geçici kapatmak (ör. sohbete yazarken) için imajda boş bir `nomap` katmanı var: o katman açıkken eşlenen tuşlar normal yazar. Örnek: `.` (nokta) açıp kapatsın. keyd tuşları ABD klavyesindeki yerlerine göre adlandırıyor; Türkçe Q'da `.` yazan tuşun adı `slash`:
 
 ```
 [*sober*]
@@ -129,7 +129,7 @@ e = w
 s = a
 d = s
 f = d
-dot = toggle(nomap)
+slash = toggle(nomap)
 nomap.e = e
 nomap.s = s
 nomap.d = d
