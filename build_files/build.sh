@@ -108,6 +108,7 @@ PACKAGES=(
   gum # İlk kurulum ekranının (nos-firstboot) arayüzü
   keyd # Tuş eşleme; pencereye göre de olabiliyor (ör. Sober/Roblox'ta ESDF → WASD). Ayarı ~/.config/keyd/app.conf, bkz. README
   python-dbus # keyd-application-mapper'ın KDE'de hangi pencerenin önde olduğunu öğrenmesi için
+  chezmoi # Kişisel ayarlar (dotfiles): kurulum programı repodaki dotfiles/'ı ev klasörüne yazıyor; sonra eşitleme (bkz. README)
   gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
 
   # Sanallaştırma (QEMU/KVM)

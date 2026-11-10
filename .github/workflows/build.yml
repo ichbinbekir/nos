@@ -9,6 +9,7 @@ on:
       - '**.md'
       - 'docs/**'
       - 'dotfiles/**'
+      - '.chezmoiroot'
       - 'tools/**'
       - 'LICENSE'
       - 'cosign.pub'
@@ -30,6 +31,7 @@ on:
       - 'docs/**'
       - 'tools/**'
       - 'dotfiles/**'
+      - '.chezmoiroot'
       - 'iso/**'
   # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
   schedule:

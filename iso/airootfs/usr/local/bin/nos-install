@@ -12,6 +12,7 @@
 #   4. Yeni sistemin ayarları yazılır: /etc (bootc composefs: state/deploy/<sürüm>/etc) ve
 #      /var (state/os/default/var). Kullanıcı, şifre ve snapshot ayarı yeni sistemin kendi
 #      araçlarıyla, chroot içinde (yeni sistemin /etc ve /var'ı + imajın /usr'ı).
+#   5. İstenirse kişisel ayarlar (dotfiles) chezmoi ile kullanıcının ev klasörüne yazılır.
 # Böylece ilk açılışta hiçbir şey sorulmaz.
 
 set -uo pipefail
@@ -24,6 +25,8 @@ DEFAULT_TIMEZONE=Europe/Istanbul
 DEFAULT_HOSTNAME=billmonster
 DEFAULT_USERNAME=bekir
 DEFAULT_FULLNAME="Bekir"
+# Kişisel ayarlar: chezmoi deposu (bu repo; .chezmoiroot ile dotfiles/ klasörü). Boş = atla.
+DEFAULT_DOTFILES=https://github.com/ichbinbekir/nos.git
 # Hazır imaj seçenekleri ("ad|adres"); listede olmayan bir imaj adresi elle de yazılabilir.
 IMAGES=(
   "nos-nitro (Acer Nitro 16)|ghcr.io/ichbinbekir/nos-nitro:latest"
@@ -198,6 +201,16 @@ ask_fullname() {
   FULLNAME="${name//:/}"
 }
 
+ask_dotfiles() {
+  header "Kişisel ayarlar (dotfiles) deposu; boş bırakılırsa atlanır"
+  info "chezmoi deposu; kurulumda ev klasörüne yazılır, sonra chezmoi ile eşitlenir."
+  echo
+  # ${DOTFILES-...}: baştan başlanınca bilerek boş bırakılan cevap korunur.
+  DOTFILES=$(gum input --padding "0 2" --width 70 --value "${DOTFILES-$DEFAULT_DOTFILES}" \
+    --placeholder "ör. https://github.com/kullanici/dotfiles") || true
+  DOTFILES="${DOTFILES// /}"
+}
+
 ask_password() {
   local p1 p2
   while :; do
@@ -328,6 +341,7 @@ summary() {
     "Bilgisayar adı: $HOSTNAME_VALUE" \
     "Kullanıcı adı : $USERNAME" \
     "Görünen ad    : ${FULLNAME:-(yok)}" \
+    "Ayarlar       : ${DOTFILES:-(yok)}" \
     "Disk          : $(disk_summary)"
   echo
   gum confirm --padding "0 2" --affirmative "Devam" --negative "Baştan başla" "Bilgiler doğru mu?" || return 1
@@ -512,6 +526,24 @@ step_user() {
       --entrypoint /usr/bin/bash "$IMAGE" -c "$CHROOT_SCRIPT"
 }
 
+# Kişisel ayarlar: chezmoi (imajın içinden) depoyu kullanıcının ev klasörüne indirip
+# uygular (~/.local/share/chezmoi; sonra chezmoi update/re-add). chroot yerine doğrudan
+# imajda çalışır: chroot'ta yeni sistemin resolv.conf'u (systemd-resolved) çalışmadığı için
+# internet yok. Ev klasörü aynı yoluna bağlanır, chezmoi kullanıcının kimliğiyle (uid:gid)
+# çalışır; dosyalar kullanıcıya ait olur.
+step_dotfiles() {
+  [[ -n "$DOTFILES" ]] || return 0
+  target_dirs || return 1
+  local ids home
+  ids=$(awk -F: -v u="$USERNAME" '$1 == u { print $3 ":" $4 }' "$T_ETC/passwd")
+  home=$(awk -F: -v u="$USERNAME" '$1 == u { print $6 }' "$T_ETC/passwd")
+  [[ -n "$ids" && "$home" == /var/* && -d "$T_VAR/${home#/var/}" ]] ||
+    { echo "Kullanıcı ya da ev klasörü bulunamadı"; return 1; }
+  "${PODMAN[@]}" run --rm --user "$ids" --hostname "$HOSTNAME_VALUE" \
+    -e HOME="$home" -e USER="$USERNAME" -v "$T_VAR/${home#/var/}:$home" -w "$home" \
+    --entrypoint chezmoi "$IMAGE" init --apply --promptDefaults "$DOTFILES"
+}
+
 # Geçici imaj deposu silinir; yeni sistemde iz kalmaz (bootc'nin composefs düzeninde kökte
 # /var yok, kurulu sistemin /var'ı state/os/default/var).
 step_cleanup() {
@@ -527,9 +559,10 @@ step_finish() {
 }
 
 # Bir adımı çalıştırır, çıktısını hem ekrana hem günlüğe yazar; hata olursa sorar.
-# Dönüş: 0 = başarılı, 1 = kullanıcı baştan başlamak istedi.
+# Üçüncü değişken "optional" ise sistemin açılması için şart olmayan bir adım: hata olursa
+# atlanabilir. Dönüş: 0 = başarılı (ya da atlandı), 1 = kullanıcı baştan başlamak istedi.
 run_step() {
-  local title="$1" fn="$2" rc
+  local title="$1" fn="$2" optional="${3:-}" rc
   while :; do
     gum style --margin "0 2" --bold ">> $title"
     "$fn" 2>&1 | tee -a "$LOG"
@@ -539,6 +572,12 @@ run_step() {
       return 0
     fi
     error "[HATA] $title başarısız (ayrıntı: $LOG)"
+    if [[ $optional == optional ]]; then
+      case $(choose "Tekrar dene" "Atla (sonra elle yapılabilir)") in
+        Atla*) return 0 ;;
+        *) continue ;;
+      esac
+    fi
     if gum confirm --padding "0 2" --affirmative "Tekrar dene" --negative "Baştan başla" "Ne yapılsın?"; then
       continue
     fi
@@ -553,6 +592,7 @@ apply_all() {
     run_step "Sistem kuruluyor" step_install &&
     run_step "Ayarlar yazılıyor" step_config &&
     run_step "Kullanıcı oluşturuluyor" step_user &&
+    run_step "Kişisel ayarlar (dotfiles) yazılıyor" step_dotfiles optional &&
     run_step "Geçici dosyalar siliniyor" step_cleanup &&
     run_step "Bitiriliyor" step_finish
 }
@@ -578,6 +618,7 @@ while :; do
   ask_username
   ask_fullname
   ask_password
+  ask_dotfiles
   ask_disk
   summary || continue
   apply_all && break

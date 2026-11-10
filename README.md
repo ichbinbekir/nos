@@ -63,6 +63,7 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
    - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
    - **imaj:** `nos-nitro` (Acer Nitro 16) ya da `nos`'tan türetilmiş başka bir imajın adresi
    - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
+   - **kişisel ayarlar (dotfiles) deposu:** varsayılan bu repo ([dotfiles/](dotfiles/)); boş bırakılırsa atlanır (aşağıda "Kişisel ayarlar")
    - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür. (Boş alana ve bölümün yerine kurulum henüz denenmedi; önemli verisi olan bir diskte önce yedek al.)
 4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
 5. Kurulum diski hazırlar, imajı internetten hedef diske indirir (birkaç GB; kurulum bitince silinir), sistemi kurar, ayarları ve kullanıcıyı yazar. 4 GB RAM yeter. Bitince USB'yi çıkarıp yeniden başlat.
@@ -150,6 +151,19 @@ sudo umount /run/esp
 İmajda SSH sunucusu açık değil; `ssh` sadece başka makinelere bağlanmak için var.
 
 Gece ışığı açıkken tarayıcıda ya da VS Code gibi uygulamalarda renkler gidip geliyorsa: Sistem Ayarları → Ekran'da renk doğruluğu/verimlilik seçeneğini "renk doğruluğu"na al. Ayar kullanıcıya ve ekrana özel; her yeni kullanıcı ve yeni ekran için bir kez yapılır.
+
+### Kişisel ayarlar (dotfiles)
+
+Ev klasörüne giden ayarlar (ör. keyd eşlemesi) bu reponun [dotfiles/](dotfiles/) klasöründe, [chezmoi](https://www.chezmoi.io/) biçiminde (`dot_config/...` → `~/.config/...`). Kurulum programı depoyu `~/.local/share/chezmoi`'ye indirip ayarları ev klasörüne yazar; sonrası chezmoi ile:
+
+| İş | Komut |
+|---|---|
+| Repodaki son ayarları ev klasörüne al | `chezmoi update` |
+| Ev klasöründe değiştirdiğin ayarları repoya al | `chezmoi re-add`, sonra `chezmoi git -- commit -am "..."` ve `chezmoi git push` |
+| Yeni bir ayar dosyasını takibe al | `chezmoi add ~/.config/...` |
+| Neler değişecek, önce gör | `chezmoi diff` |
+
+Depo kurulumda herkese açık adresten (HTTPS) iner; push için bir kez SSH adresine çevir: `chezmoi git -- remote set-url origin git@github.com:ichbinbekir/nos.git`. Şifre, SSH anahtarı gibi gizli bilgiler repoya konmaz. Kurulum programıyla kurulmamış bir sistemde: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.
 
 ### Ev dizini snapshot'ları
 
