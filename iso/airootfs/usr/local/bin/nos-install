@@ -47,8 +47,12 @@ TARGET=/mnt
 # ensure_mirrored_host_mount). Orası USB'nin geçici dosya sisteminde (overlayfs) kalırsa
 # podman açılmıyordu ("'overlay' is not supported over overlayfs"). --root ile başka bir yol
 # verilemiyor: podman veritabanı deponun yolunu kaydediyor, farklı yoldan açılmıyor.
+# Canlı sistemin /var/tmp'si de alt birimdeki bir klasöre bağlanır: podman indirirken, bootc
+# imajı kurarken (o da canlı sistemin /var/tmp'sini kullanıyor, install.rs) büyük geçici
+# dosyaları oraya yazıyor; USB'nin 1 GB'lık yazılabilir alanına sığmıyordu ("no space left").
 STORE="$TARGET/var/lib/containers"
 HOST_STORE=/var/lib/containers
+HOST_TMP=/var/tmp
 PODMAN=(podman)
 LOG=/root/nos-install.log
 ACCENT=4
@@ -369,13 +373,12 @@ summary() {
 partition_path() { lsblk -lnpo PATH,PARTN "$1" | awk -v n="$2" '$2 == n { print $1 }'; }
 
 step_pull() {
-  # podman indirdiklerini önce geçici bir klasöre yazıyor; o da hedef diske.
-  mkdir -p "$HOST_STORE/tmp"
-  TMPDIR="$HOST_STORE/tmp" "${PODMAN[@]}" pull "$IMAGE"
+  "${PODMAN[@]}" pull "$IMAGE"
 }
 
 step_disk() {
   # Önceki (yarım kalmış) denemeden kalan bağlantılar.
+  umount "$HOST_TMP" 2>/dev/null || true
   umount "$HOST_STORE" 2>/dev/null || true
   umount -R "$TARGET" 2>/dev/null || true
   case $MODE in
@@ -416,6 +419,8 @@ step_disk() {
   mount --bind "$STORE" "$STORE"
   mkdir -p "$HOST_STORE"
   mount --bind "$STORE" "$HOST_STORE"
+  mkdir -p "$HOST_STORE/tmp"
+  mount --bind "$HOST_STORE/tmp" "$HOST_TMP"
   local free_esp
   free_esp=$(df -B1 --output=avail "$TARGET/boot" | tail -n1)
   if ((free_esp < 300 * 1024 ** 2)); then
@@ -427,6 +432,9 @@ step_disk() {
 # kapsayıcısı aynı diskte hâlâ çalışırken "mount point is busy" ile düşüyordu. Diski sonra
 # kurulum programı kendisi ayırıyor (step_finish).
 step_install() {
+  # Yarım kalmış önceki denemenin dosyaları (composefs, ostree...); bootc boş kök istiyor.
+  # EFI bölümü (boot) ve geçici imaj deposu (var) kalır.
+  find "$TARGET" -mindepth 1 -maxdepth 1 ! -name boot ! -name var -exec rm -rf {} +
   "${PODMAN[@]}" run --rm --privileged --pid=host --security-opt label=type:unconfined_t \
     -v "$HOST_STORE:/var/lib/containers" -v /dev:/dev -v "$TARGET:/target" \
     "$IMAGE" bootc install to-filesystem --composefs-backend --bootloader systemd \
@@ -547,6 +555,7 @@ step_dotfiles() {
 # Geçici imaj deposu silinir; yeni sistemde iz kalmaz (bootc'nin composefs düzeninde kökte
 # /var yok, kurulu sistemin /var'ı state/os/default/var).
 step_cleanup() {
+  umount "$HOST_TMP" 2>/dev/null || true
   umount "$HOST_STORE" 2>/dev/null || true
   umount -R "$STORE" 2>/dev/null || true
   btrfs subvolume delete "$STORE" &&
