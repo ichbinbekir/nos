@@ -121,6 +121,21 @@ f = d
 
 Sonra oturumu kapatıp aç (eşlemeleri oturum açılışında `keyd-application-mapper` başlatıyor). Köşeli parantezin içi pencere adı; araç adları küçük harfe çevirip harf ve rakam dışındaki her şeyi `-` yapıyor (`org.vinegarhq.Sober` → `org-vinegarhq-sober`), `*` herhangi bir şey demek. Pencerenin adını öğrenmek için: `keyd-application-mapper -v` (pencereler arasında geçiş yaptıkça adlarını yazar; çalışan kopyası varsa önce `pkill -f keyd-application-mapper`). Kullanıcı `keyd` grubunda olmalı (kurulum programı ekliyor). Bütün sistemde geçerli eşlemeler `/etc/keyd/` altında (bkz. `man keyd`).
 
+Eşlemeyi oyun içinde bir tuşla geçici kapatmak (ör. sohbete yazarken) için imajda boş bir `nomap` katmanı var: o katman açıkken eşlenen tuşlar normal yazar. Örnek: `.` (nokta) açıp kapatsın:
+
+```
+[*sober*]
+e = w
+s = a
+d = s
+f = d
+dot = toggle(nomap)
+nomap.e = e
+nomap.s = s
+nomap.d = d
+nomap.f = f
+```
+
 Açılış yazılar yerine sade bir animasyonla geçer; yazıları görmek için açılırken Esc'ye bas.
 
 Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini ilk kurulum ekranı ayarlıyor. `bootc switch` ile gelen sistemlerde menü görünmüyorsa EFI bölümünü (`lsblk -f`'te `vfat` olan, ör. `/dev/sda2`) geçici olarak bağlayıp ayarı yaz:
