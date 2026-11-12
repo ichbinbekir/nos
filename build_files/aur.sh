@@ -8,7 +8,7 @@ AUR_PACKAGES=(
   helium-browser-bin # Tarayıcı
   espanso-wayland-bin # Metin kısaltmaları (ör. ":date" → tarih). espanso'nun kendi Wayland paketi (.deb); kaynaktan derlemek her build'e dakikalar eklerdi
   zapret-git # DPI engelini aşma (bol-van/zapret). Ayarı /etc/zapret, bkz. README "Engelli siteler"
-  cloudflare-warp-nox-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor); sadece warp-cli, grafik arayüz ve webkit2gtk'siz sürüm
+  cloudflare-warp-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor): warp-cli + menüde "Cloudflare One Client". Servisi kapalı gelir, bkz. README
 )
 
 pacman -Syu --noconfirm --needed base-devel git

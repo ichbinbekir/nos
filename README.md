@@ -164,7 +164,7 @@ matches:
     replace: "ornek@ornek.com"
 ```
 
-Dosya kaydedilince espanso kendisi yeniden okur. Girişte kendiliğinden açılması için bir kez: `systemctl --user enable --now espanso` (sahibinin [dotfiles](dotfiles/)'ı bunu ve kısaltmaları kendisi getiriyor). Wayland'de klavye düzeni `~/.config/espanso/config/default.yml`'de yazılı olmalı (`keyboard_layout: {layout: "tr"}`). Geçici kapatıp açmak: `espanso cmd toggle`; durum: `espanso status`.
+Dosya kaydedilince espanso kendisi yeniden okur. Girişte kendiliğinden açılması için bir kez: `espanso service register` ve `espanso start` (espanso kendi servis dosyasını ev klasörüne yazar; sahibinin [dotfiles](dotfiles/)'ı bu dosyayı ve kısaltmaları kendisi getiriyor). Wayland'de klavye düzeni `~/.config/espanso/config/default.yml`'de yazılı olmalı (`keyboard_layout: {layout: "tr"}`). Geçici kapatıp açmak: `espanso cmd toggle`; durum: `espanso status`.
 
 ### Engelli siteler (zapret ve WARP)
 
@@ -176,13 +176,17 @@ Dosya kaydedilince espanso kendisi yeniden okur. Girişte kendiliğinden açılm
 
 Listeye site eklemek: `sudoedit /etc/zapret/ipset/zapret-hosts-user.txt` (satır başına bir alan adı), sonra `sudo systemctl restart zapret`. Kapatmak: `sudo systemctl disable --now zapret`.
 
-**Cloudflare WARP** ücretsiz VPN; hesap gerekmiyor. Bütün trafiği Cloudflare üzerinden geçirir (bölge seçilemez, en yakın sunucuya bağlanır). zapret işe yaramadığında ya da oyun gibi her bağlantının aşması gerektiğinde kullanılır:
+**Cloudflare WARP** ücretsiz VPN; hesap gerekmiyor. Bütün trafiği Cloudflare üzerinden geçirir (bölge seçilemez, en yakın sunucuya bağlanır). zapret işe yaramadığında ya da oyun gibi her bağlantının aşması gerektiğinde kullanılır. Servisi kapalı gelir; açılınca da VPN sen bağlanana kadar bağlanmaz. Arayüzü uygulama menüsünde "Cloudflare One Client" (simgesi sistem tepsisinde); terminalden:
 
 | İş | Komut |
 |---|---|
+| Servisi aç (her açılışta çalışsın) / kapat | `sudo systemctl enable --now warp-svc` / `sudo systemctl disable --now warp-svc` |
+| Sadece bu oturum için servisi başlat | `sudo systemctl start warp-svc` |
 | İlk kez (bir kez) | `warp-cli registration new` |
-| Aç / kapat | `warp-cli connect` / `warp-cli disconnect` |
+| Bağlan / bağlantıyı kes | `warp-cli connect` / `warp-cli disconnect` |
 | Durum | `warp-cli status` |
+
+Bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır (servis açıksa).
 
 ### Kişisel ayarlar (dotfiles)
 

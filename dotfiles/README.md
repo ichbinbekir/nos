@@ -9,7 +9,8 @@ chezmoi'ye sadece bu klasörü kullanmasını söylüyor. Bu README ev klasörü
 Dosya adları chezmoi'nin biçiminde: `dot_` ile başlayan ad ev klasöründe `.` ile başlar.
 Örneğin `dot_config/keyd/app.conf` → `~/.config/keyd/app.conf`. `symlink_` ile başlayan dosya
 bir bağlantı olur, içeriği bağlantının hedefi (ör. `dot_config/systemd/user/default.target.wants/symlink_espanso.service`:
-espanso girişte kendiliğinden açılsın).
+espanso girişte kendiliğinden açılsın; `systemctl --user enable` ile aynı şey). `dot_config/systemd/user/espanso.service`
+espanso'nun kendi `espanso service register` komutunun yazdığı dosyanın aynısı.
 
 İçindekiler: fish (`arrow` istemi, karşılama kapalı), espanso kısaltmaları, keyd eşlemesi.
 
