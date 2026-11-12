@@ -41,6 +41,8 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 - **Uygulamalar:** Konsole, Dolphin, Kate/KWrite, Ark, Spectacle, KDE Connect, Sistem İzleyici, Discover (sadece Flatpak), Btrfs Assistant (snapshot)
 - **Tarayıcı:** Helium
 - **Güç modları ve fanlar (`nos-nitro`):** KDE'nin pil simgesindeki güç modu seçicisi (güç tasarrufu, dengeli, performans = turbo) ve klavyedeki turbo/NitroSense tuşu (modlar sırayla döner: eco, sessiz, dengeli, performans, turbo; tuş rengi yeşil eco, beyaz sessiz, turuncu dengeli, kırmızı performans, mor turbo). Fan devri ve sıcaklıklar `sensors` ve Sistem İzleyici'de.
+- **Engelli siteler:** zapret (DPI engelini aşar, açık ve kendiliğinden çalışır) ve Cloudflare WARP (ücretsiz VPN, istenince açılır). Bkz. [Engelli siteler](#engelli-siteler-zapret-ve-warp).
+- **Metin kısaltmaları:** espanso (ör. `:date` yazınca bugünün tarihi). Bkz. [Metin kısaltmaları](#metin-kısaltmaları-espanso).
 - **Araçlar:** fish, fastfetch, htop, unzip, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
 - **Görünüm:** Sistem adı her yerde `nos` olarak görünür. fastfetch'te kendi logosu var: mavi bir NOS (nitro) tüpü. İsim de buradan geliyor.
 
@@ -152,6 +154,36 @@ sudo umount /run/esp
 
 Gece ışığı açıkken tarayıcıda ya da VS Code gibi uygulamalarda renkler gidip geliyorsa: Sistem Ayarları → Ekran'da renk doğruluğu/verimlilik seçeneğini "renk doğruluğu"na al. Ayar kullanıcıya ve ekrana özel; her yeni kullanıcı ve yeni ekran için bir kez yapılır.
 
+### Metin kısaltmaları (espanso)
+
+[espanso](https://espanso.org/) yazdığın kısaltmayı metinle değiştirir; her uygulamada çalışır. Kısaltmalar `~/.config/espanso/match/base.yml`'de, örnek:
+
+```yaml
+matches:
+  - trigger: ":mail"
+    replace: "ornek@ornek.com"
+```
+
+Dosya kaydedilince espanso kendisi yeniden okur. Girişte kendiliğinden açılması için bir kez: `systemctl --user enable --now espanso` (sahibinin [dotfiles](dotfiles/)'ı bunu ve kısaltmaları kendisi getiriyor). Wayland'de klavye düzeni `~/.config/espanso/config/default.yml`'de yazılı olmalı (`keyboard_layout: {layout: "tr"}`). Geçici kapatıp açmak: `espanso cmd toggle`; durum: `espanso status`.
+
+### Engelli siteler (zapret ve WARP)
+
+**zapret** internet sağlayıcısının engelini (DPI) bağlantıyı yavaşlatmadan aşar; VPN değildir, trafik yine doğrudan gider. Açık geliyor ve sadece engelli görünen sitelere uygulanıyor: listedekilere (Discord, Roblox: `/etc/zapret/ipset/zapret-hosts-user.txt`) ve açılmadığını kendisi fark ettiklerine (`zapret-hosts-auto.txt`). Hangi yöntemin işe yaradığı internet sağlayıcısına göre değişir. Hazır ayar çalışmazsa uygun olanı bulmak için:
+
+1. `sudo /opt/zapret/blockcheck.sh` (soruları varsayılanla geç, alan adına engelli bir site yaz, ör. `discord.com`; birkaç dakika sürer).
+2. Sonda "summary" altında çalışan seçenekleri (`nfqws ... --dpi-desync=...`) `/etc/zapret/config`'teki `NFQWS_OPT`'a yaz (`sudoedit /etc/zapret/config`).
+3. `sudo systemctl restart zapret`.
+
+Listeye site eklemek: `sudoedit /etc/zapret/ipset/zapret-hosts-user.txt` (satır başına bir alan adı), sonra `sudo systemctl restart zapret`. Kapatmak: `sudo systemctl disable --now zapret`.
+
+**Cloudflare WARP** ücretsiz VPN; hesap gerekmiyor. Bütün trafiği Cloudflare üzerinden geçirir (bölge seçilemez, en yakın sunucuya bağlanır). zapret işe yaramadığında ya da oyun gibi her bağlantının aşması gerektiğinde kullanılır:
+
+| İş | Komut |
+|---|---|
+| İlk kez (bir kez) | `warp-cli registration new` |
+| Aç / kapat | `warp-cli connect` / `warp-cli disconnect` |
+| Durum | `warp-cli status` |
+
 ### Kişisel ayarlar (dotfiles)
 
 Ev klasörüne giden ayarlar (ör. keyd eşlemesi) bu reponun [dotfiles/](dotfiles/) klasöründe, [chezmoi](https://www.chezmoi.io/) biçiminde (`dot_config/...` → `~/.config/...`). Kurulum programı depoyu `~/.local/share/chezmoi`'ye indirip ayarları ev klasörüne yazar; sonrası chezmoi ile:
@@ -162,6 +194,8 @@ Ev klasörüne giden ayarlar (ör. keyd eşlemesi) bu reponun [dotfiles/](dotfil
 | Ev klasöründe değiştirdiğin ayarları repoya al | `chezmoi re-add`, sonra `chezmoi git -- commit -am "..."` ve `chezmoi git push` |
 | Yeni bir ayar dosyasını takibe al | `chezmoi add ~/.config/...` |
 | Neler değişecek, önce gör | `chezmoi diff` |
+
+Kurulumda oluşturulan kullanıcının grupları (sudo, sanal makineler vb.) imajdaki listeden gelir: [system_files/usr/share/nos/user-groups](system_files/usr/share/nos/user-groups). Listeye sonradan eklenen grup mevcut kullanıcıya kendiliğinden verilmez: `sudo usermod -aG <grup> $USER`, sonra yeniden başlat.
 
 Depo kurulumda herkese açık adresten (HTTPS) iner; push için bir kez SSH adresine çevir: `chezmoi git -- remote set-url origin git@github.com:ichbinbekir/nos.git`. Şifre, SSH anahtarı gibi gizli bilgiler repoya konmaz. Kurulum programıyla kurulmamış bir sistemde: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.
 

@@ -7,6 +7,10 @@ chezmoi'ye sadece bu klasörü kullanmasını söylüyor. Bu README ev klasörü
 (`.chezmoiignore`).
 
 Dosya adları chezmoi'nin biçiminde: `dot_` ile başlayan ad ev klasöründe `.` ile başlar.
-Örneğin `dot_config/keyd/app.conf` → `~/.config/keyd/app.conf`.
+Örneğin `dot_config/keyd/app.conf` → `~/.config/keyd/app.conf`. `symlink_` ile başlayan dosya
+bir bağlantı olur, içeriği bağlantının hedefi (ör. `dot_config/systemd/user/default.target.wants/symlink_espanso.service`:
+espanso girişte kendiliğinden açılsın).
+
+İçindekiler: fish (`arrow` istemi, karşılama kapalı), espanso kısaltmaları, keyd eşlemesi.
 
 Kurulum programı kullanılmadan: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.

@@ -1,0 +1,21 @@
+# Metin kısaltmaları: yazınca yerine geçer. Yenisi için bir "- trigger/replace" ekle;
+# espanso dosyayı kaydedince kendiliğinden yeniden okur.
+matches:
+  - trigger: ":date"
+    replace: "{{tarih}}"
+    vars:
+      - name: tarih
+        type: date
+        params:
+          format: "%d.%m.%Y"
+
+  - trigger: ":time"
+    replace: "{{saat}}"
+    vars:
+      - name: saat
+        type: date
+        params:
+          format: "%H:%M"
+
+  - trigger: ":mail"
+    replace: "bekiirun@gmail.com"

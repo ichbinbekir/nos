@@ -1,0 +1,8 @@
+# Kurulumda oluşturulan kullanıcının eklendiği gruplar (satır başına bir grup).
+# Kurulum programı (nos-install) ve ilk açılış ekranı (nos-firstboot) okur; imajda
+# olmayan grup atlanır. Yeni grup eklenince mevcut kullanıcıya elle verilir:
+#   sudo usermod -aG <grup> <kullanıcı>   (sonra yeniden başlat)
+wheel     # sudo
+libvirt   # sanal makineleri şifresiz yönetmek (virt-manager)
+keyd      # pencereye göre tuş eşleme (keyd-application-mapper)
+gamemode  # GameMode'un işlemci önceliği ayarları

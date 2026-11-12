@@ -123,6 +123,11 @@ pacman -S --noconfirm --needed "${PACKAGES[@]}"
 
 # AUR paketleri (aur.sh tarafından derlendi). Bağımlılıkları depolardan gelir.
 find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U --noconfirm
+# espanso Wayland'de klavyeyi /dev/input'tan okuyor; bunun için kendi kurulum betiği bu izni
+# veriyor. Paket betiği değişirse diye açıkça verilir ve günlüğe yazılır (izin imaj katmanlarında
+# korunuyor; kwin_wayland'in izni de aynı yoldan geliyor).
+setcap cap_dac_override+p /usr/bin/espanso
+getcap /usr/bin/espanso
 
 # system_files/ köke kopyalanır. Paketlerden sonra yapılır ki bir paketin kendi dosyasının
 # yerine koyduğumuz ayarlar (ör. /etc/environment) paket kurulumunda ezilmesin.
@@ -155,6 +160,8 @@ systemctl enable \
   snapper-cleanup.timer \
   libvirtd.socket \
   keyd.service \
+  zapret.service \
+  warp-svc.service \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 

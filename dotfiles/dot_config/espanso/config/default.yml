@@ -1,0 +1,4 @@
+# espanso genel ayarları. Wayland'de klavye düzeni elle verilmeli; yoksa harfler ABD
+# düzenine göre çözülür ve kısaltmalar Türkçe Q'da tutmaz.
+keyboard_layout:
+  layout: "tr"
