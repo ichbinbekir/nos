@@ -161,8 +161,12 @@ systemctl enable \
   libvirtd.socket \
   keyd.service \
   zapret.service \
+  warp-svc.service \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
+# Cloudflare WARP'ın tepsi simgesi; Cloudflare'in kendi paketi kurulurken bunu ve warp-svc'yi
+# açıyor, aynısı. (VPN kullanıcı bağlanana kadar bağlanmaz.) Kapatmak: systemctl --user disable warp-taskbar
+systemctl --global enable warp-taskbar.service
 
 # Güvenlik duvarı (ufw): Gelen bağlantılar varsayılan olarak kapalı, giden açık.
 # Sadece KDE Connect'in portları açılır. ufw build sırasında çalışmadığı için kurallar

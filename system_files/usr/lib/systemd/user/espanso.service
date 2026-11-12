@@ -1,0 +1,15 @@
+# espanso (metin kısaltmaları). espanso'nun kendi "espanso service register" komutunun
+# ev klasörüne yazdığı servisin aynısı; imajda hazır durur, kullanıcı açar:
+#   systemctl --user enable --now espanso
+# (sahibinin dotfiles'ı bunu kendisi açıyor). Açıksa espanso kendi dosyasını yazmıyor
+# ("systemctl --user is-enabled" + ExecStart yolu kontrolü). Ayarlar ~/.config/espanso.
+[Unit]
+Description=espanso
+
+[Service]
+ExecStart=/usr/bin/espanso launcher
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -1,1 +1,1 @@
-../espanso.service
+/usr/lib/systemd/user/espanso.service
