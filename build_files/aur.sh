@@ -29,5 +29,11 @@ for pkg in "${AUR_PACKAGES[@]}"; do
       runuser -u build -- gpg --keyserver hkps://keys.openpgp.org --recv-keys "${key}"
   done
 
-  runuser -u build -- env PKGDEST=/output makepkg -s --noconfirm
+  # Paketin tarihi her build'de "şimdi" olmasın: makepkg dosya tarihlerini ve paketin build
+  # tarihini SOURCE_DATE_EPOCH'tan alıyor, chunkah da katmandaki tarihleri buna göre
+  # sabitliyor. Tarih her gün değişince içerik aynı olsa da katman değişiyor ve her
+  # güncellemede yeniden iniyordu (Helium ~180 MB/gün). AUR tarifinin son değişiklik
+  # tarihi kullanılır; tarif güncellenince değişir.
+  epoch=$(git -C "/home/build/${pkg}" log -1 --format=%ct)
+  runuser -u build -- env PKGDEST=/output SOURCE_DATE_EPOCH="${epoch}" makepkg -s --noconfirm
 done
