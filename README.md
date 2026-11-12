@@ -65,12 +65,19 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
    - klavye düzeni, internet (kablo yoksa Wi-Fi seçimi)
    - **imaj:** `nos-nitro` (Acer Nitro 16) ya da `nos`'tan türetilmiş başka bir imajın adresi
    - sistem dili, saat dilimi, bilgisayar adı, kullanıcı adı, görünen ad, şifre
-   - **kişisel ayarlar (dotfiles) deposu:** varsayılan bu repo ([dotfiles/](dotfiles/)); boş bırakılırsa atlanır (aşağıda "Kişisel ayarlar")
+   - **kişisel ayarlar (dotfiles) deposu:** bir chezmoi deposunun adresi; varsayılan bu repo (`https://github.com/ichbinbekir/nos.git`). Klasör yolu değil, deponun adresi yazılır: reponun kökündeki `.chezmoiroot` chezmoi'ye sadece [dotfiles/](dotfiles/) klasörünü kullanmasını söylüyor. Boş bırakılırsa atlanır (aşağıda "Kişisel ayarlar")
    - **disk:** bütün disk (silinir; 1 GB EFI + nos), boş alana (Windows vb. korunur) ya da var olan bir bölümün yerine. Windows'un yanına kurulunca EFI bölümü paylaşılır ve açılış menüsünde Windows da görünür. (Boş alana ve bölümün yerine kurulum henüz denenmedi; önemli verisi olan bir diskte önce yedek al.)
 4. Özet gösterilir; onaydan önce diske hiçbir şey yazılmaz. Silinecek disk ya da bölüm adı yazdırılarak son kez onaylanır.
 5. Kurulum diski hazırlar, imajı internetten hedef diske indirir (birkaç GB; kurulum bitince silinir), sistemi kurar, ayarları ve kullanıcıyı yazar. 4 GB RAM yeter. Bitince USB'yi çıkarıp yeniden başlat.
 
 Kullanıcının kabuğu fish; `root` hesabı kilitli, yönetici işleri için `sudo` (kurulumdaki kullanıcı `sudo` kullanabilir). Ev dizininin otomatik snapshot'ları kurulumda ayarlanır.
+
+**Kullanıcı grupları:** Kurulumda oluşturulan kullanıcı imajdaki listedeki gruplara eklenir: [system_files/usr/share/nos/user-groups](system_files/usr/share/nos/user-groups) (şu an `wheel`: sudo, `libvirt`: sanal makineler, `keyd`: pencereye göre tuş eşleme, `gamemode`: GameMode'un oyun ayarları). Liste kurulum USB'sinde değil imajda durur; kurulum programı onu kurduğu imajın içinden okur, imajda olmayan grup atlanır. Yeni bir grup eklemek için:
+
+1. Dosyaya satır başına bir grup yaz (`#`'dan sonrası açıklama), commit + push. Bir sonraki imajla birlikte yeni kurulumlarda geçerli olur; USB'yi yeniden üretmek gerekmez.
+2. Var olan kullanıcıya kendiliğinden verilmez, bir kez elle: `sudo usermod -aG <grup> $USER`, sonra yeniden başlat (oturumu kapatıp açmak yetmeyebilir). Hangi gruplarda olduğunu görmek: `groups`.
+
+Gruplar dotfiles'ta değil imajda, çünkü dotfiles isteğe bağlı (atlanırsa kullanıcı `sudo` bile kullanamazdı), sadece ev klasörüne yazıyor ve grupları imajdaki programlar oluşturuyor.
 
 Kurulum programı: [iso/airootfs/usr/local/bin/nos-install](iso/airootfs/usr/local/bin/nos-install). Varsayılan cevaplar (imaj, dil, kullanıcı adı vb.) dosyanın başında; hepsi kurulumda değiştirilebilir.
 
@@ -198,8 +205,6 @@ Ev klasörüne giden ayarlar (ör. keyd eşlemesi) bu reponun [dotfiles/](dotfil
 | Ev klasöründe değiştirdiğin ayarları repoya al | `chezmoi re-add`, sonra `chezmoi git -- commit -am "..."` ve `chezmoi git push` |
 | Yeni bir ayar dosyasını takibe al | `chezmoi add ~/.config/...` |
 | Neler değişecek, önce gör | `chezmoi diff` |
-
-Kurulumda oluşturulan kullanıcının grupları (sudo, sanal makineler vb.) imajdaki listeden gelir: [system_files/usr/share/nos/user-groups](system_files/usr/share/nos/user-groups). Listeye sonradan eklenen grup mevcut kullanıcıya kendiliğinden verilmez: `sudo usermod -aG <grup> $USER`, sonra yeniden başlat.
 
 Depo kurulumda herkese açık adresten (HTTPS) iner; push için bir kez SSH adresine çevir: `chezmoi git -- remote set-url origin git@github.com:ichbinbekir/nos.git`. Şifre, SSH anahtarı gibi gizli bilgiler repoya konmaz. Kurulum programıyla kurulmamış bir sistemde: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.
 
