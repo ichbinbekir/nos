@@ -150,14 +150,7 @@ nomap.f = f
 
 Açılış yazılar yerine sade bir animasyonla geçer; yazıları görmek için açılırken Esc'ye bas.
 
-Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini ilk kurulum ekranı ayarlıyor. `bootc switch` ile gelen sistemlerde menü görünmüyorsa EFI bölümünü (`lsblk -f`'te `vfat` olan, ör. `/dev/sda2`) geçici olarak bağlayıp ayarı yaz:
-
-```
-sudo mkdir -p /run/esp
-sudo mount /dev/sda2 /run/esp
-sudo sed -i 's/^#\?timeout.*/timeout 5/' /run/esp/loader/loader.conf
-sudo umount /run/esp
-```
+Açılışta 5 saniyelik bir menü çıkar: nos'un şu anki ve önceki sürümü, aynı EFI bölümündeyse Windows. Bekleme süresini kurulum programı ayarlıyor.
 
 İmajda SSH sunucusu açık değil; `ssh` sadece başka makinelere bağlanmak için var.
 
