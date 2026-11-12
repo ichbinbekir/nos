@@ -79,6 +79,8 @@ Kullanıcının kabuğu fish; `root` hesabı kilitli, yönetici işleri için `s
 
 Gruplar dotfiles'ta değil imajda, çünkü dotfiles isteğe bağlı (atlanırsa kullanıcı `sudo` bile kullanamazdı), sadece ev klasörüne yazıyor ve grupları imajdaki programlar oluşturuyor.
 
+**Başka bir sistemden `bootc switch` ile geçiş desteklenmiyor.** nos diskin btrfs olmasını (sıkıştırma ayarı yüzünden başka dosya sisteminde açılmaz) ve bootc'nin composefs + systemd-boot düzenini bekliyor; Fedora tabanlı sistemler (Aurora, Bluefin, Silverblue vb.) farklı bir düzen kullanıyor. Ayrıca gruplar, snapshot ayarı gibi kurulumda yapılan işler eksik kalır. nos'a geçmek için kurulum USB'siyle sıfırdan kur (önce ev klasörünü yedekle). nos imajları arasında geçiş (ör. `nos-nitro`'nun eski bir günü) sorunsuz.
+
 Kurulum programı: [iso/airootfs/usr/local/bin/nos-install](iso/airootfs/usr/local/bin/nos-install). Varsayılan cevaplar (imaj, dil, kullanıcı adı vb.) dosyanın başında; hepsi kurulumda değiştirilebilir.
 
 <details>
@@ -225,29 +227,6 @@ Sistem dosyaları için snapshot gerekmiyor; onlar salt okunur ve `sudo bootc ro
 Snapshot yedek değildir: aynı diskte durur. Disk bozulursa snapshot'lar da gider; önemli dosyaların ayrıca başka bir yerde yedeği olmalı. Büyük bir dosya silindiğinde yer, o dosyayı içeren en eski snapshot silinince (en geç 2 hafta) açılır.
 
 Snapshot'a girmesini istemediğin büyük bir klasörü (ör. oyunlar) ayrı bir btrfs alt birimi yapabilirsin: `btrfs subvolume create ~/Oyunlar`. Alt birimin içindekiler ana snapshot'lara dahil edilmez.
-
-#### Başka bir sistemden `bootc switch` ile gelenler
-
-Snapshot ayarını ilk kurulum ekranı yapıyor; `switch` ile gelen sistemlerde o ekran çalışmadığı için ayar yok. Kurmak için (disk btrfs olmalı):
-
-1. Masaüstünden çıkış yap, `Ctrl+Alt+F3` ile metin ekranına geç ve kendi kullanıcınla gir.
-2. Ev dizinini btrfs alt birimine (subvolume) çevir. Snapshot sadece alt birimlerden alınabiliyor. Dosyalar kopyalanmadan, aynı yerde kalarak taşınır (`--reflink`):
-   ```
-   cd /
-   sudo mv /var/home /var/home.old
-   sudo btrfs subvolume create /var/home
-   sudo chmod 0755 /var/home
-   sudo cp -a --reflink=always /var/home.old/. /var/home/
-   ```
-3. snapper'ı ayarla (`<kullanıcı>` yerine kendi kullanıcı adını yaz):
-   ```
-   sudo snapper -c home create-config /var/home
-   sudo snapper -c home set-config TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes \
-     TIMELINE_LIMIT_HOURLY=0 TIMELINE_LIMIT_DAILY=3 TIMELINE_LIMIT_WEEKLY=2 \
-     TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0 \
-     ALLOW_USERS=<kullanıcı> SYNC_ACL=yes
-   ```
-4. Yeniden başlat. Her şey yerindeyse eski kopyayı sil: `sudo rm -rf /var/home.old`
 
 ## İmza doğrulama
 
