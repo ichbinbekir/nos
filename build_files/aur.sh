@@ -34,6 +34,6 @@ for pkg in "${AUR_PACKAGES[@]}"; do
   # sabitliyor. Tarih her gün değişince içerik aynı olsa da katman değişiyor ve her
   # güncellemede yeniden iniyordu (Helium ~180 MB/gün). AUR tarifinin son değişiklik
   # tarihi kullanılır; tarif güncellenince değişir.
-  epoch=$(git -C "/home/build/${pkg}" log -1 --format=%ct)
+  epoch=$(runuser -u build -- git -C "/home/build/${pkg}" log -1 --format=%ct)
   runuser -u build -- env PKGDEST=/output SOURCE_DATE_EPOCH="${epoch}" makepkg -s --noconfirm
 done
