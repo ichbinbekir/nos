@@ -113,6 +113,17 @@ Yapı iki kaynaktan birleştirildi:
 - Betikler Containerfile'da `bash /ctx/...` ile çalıştırılıyor (Windows'ta yazılan dosyaların çalıştırma izni yok). `.gitattributes` her şeyi LF tutuyor; CRLF betikleri bozar.
 - Betik yorumları Türkçe, commit mesajları İngilizce ve conventional commit biçiminde.
 
+## Geçici çözümler (upstream düzelince kaldırılacak)
+
+Başkasının aracındaki bir hata ya da eksik yüzünden yaptığımız ekler. **Sahibinin kuralı (14 Kasım): yeni böyle bir ek yapıldığında kesinlikle buraya eklenir** (ne, nerede, neden, upstream kaydı, ne zaman kalkar). Güncellemelerde (paket/sürüm değişikliği, build günlüğü) bunlara göz atılır; düzelen kaldırılır ve buradan silinir. Yapı gereği kalıcı olanlar (bootc'yi kendimiz derlemek, espanso kaynak derlemesi, zapret'in `/etc`'ye yönlendirilmesi, `var-tmpfiles.sh`, NoExtract) burada değil, ilgili teknik notta.
+
+- **distrobox `ro:rslave`** (`build_files/build.sh`, `distrobox-create`'e `sed`): distrobox 1.8.2.5'te salt okunur bağlama yazım hatası, crun 1.31 ile ortaya çıktı (ayrıntı: teknik notlarda). Upstream: distrobox#2083, `legacy` dalında düzeltildi, 1.8.x sürümü çıkmadı; distrobox 2 (rc.4, Temmuz 2026) yeniden yazım. **Kalkar:** düzeltilmiş 1.8.x ya da 2.0 Arch'a gelince (adım satırı bulamayınca kendiliğinden atlıyor; yine de silinmeli). distrobox 2'de komutlar değişebilir.
+- **Acer AN16-51 `predator_v4=1`** (`machines/nitro/system_files/usr/lib/modprobe.d/nos-acer.conf`): çekirdeğin acer-wmi DMI listesinde model yok, fan pwm de bu yüzden kapalı. Upstream: sahibinin 7 Kasım yaması (açık konularda, Message-Id orada). **Kalkar:** yama kabul edilip Arch çekirdeğine gelince.
+- **`latest`'i iki kez yükleme** (`.github/workflows/build.yml`, push döngüsü + `cleanup`'taki etiketsiz kayıt silme): podman ilk push'ta katman bilgilerini eksik gönderip farklı digest üretiyor. Upstream: podman#27796. **Kalkar:** podman düzeltince (tek push'la `latest` ve tarih etiketi aynı digest'i gösterirse); `cleanup`'taki etiketsiz silme de gözden geçirilmeli.
+- **`nos-update.timer`/`.service`** (`system_files`): bootc'nin `bootc-fetch-apply-updates.timer`'ı `/run/ostree-booted` şartı yüzünden composefs açılışında çalışmıyor. **Kalkabilir:** bootc şartı composefs'i de kapsayınca; ama o zamanlayıcı `--apply` ile kendiliğinden yeniden başlatıyor, sahibi bunu istemediği için büyük ihtimalle bizimki kalır.
+- **`loader.conf` `timeout 5`** (`nos-install` `step_config`, `nos-firstboot`): bootc menü süresini sadece `loader.conf` yoksa yazıyor (`boot.rs`), bootctl ise önce satırları kapalı bir dosya oluşturuyor; menü hiç görünmüyordu. **Kalkar:** bootc bunu düzeltince (taze kurulumda `loader.conf`'ta `timeout` varsa).
+- **Kurulumda `--skip-finalize`** (`nos-install` `step_install`): bootc'nin finalize adımı kökü `remount,ro` yaparken aynı diskte çalışan imaj kapsayıcısı yüzünden "mount point is busy" veriyor. Kısmen bizim yöntemimizden (imaj hedef diskte); upstream'de düzelmesi beklenmiyor, bootc'nin kurulum davranışı değişirse bakılmalı.
+
 ## Açık konular
 
 Bekleyen işler ve sahibinden beklenen kararlar. Bitince buradan çıkarılır.
