@@ -6,7 +6,7 @@ set -xeuo pipefail
 
 AUR_PACKAGES=(
   helium-browser-bin # Tarayıcı
-  espanso-wayland-bin # Metin kısaltmaları (ör. ":date" → tarih). espanso'nun kendi Wayland paketi (.deb); kaynaktan derlemek her build'e dakikalar eklerdi
+  espanso # Metin kısaltmaları (ör. ":date" → tarih). Kaynaktan, sadece Wayland sürümü (aşağıda). Hazır Debian paketi (espanso-wayland-bin) Arch'ın wxWidgets'ıyla uyumsuzdu, açılışta çöküyordu
   zapret-git # DPI engelini aşma (bol-van/zapret). Ayarı /etc/zapret, bkz. README "Engelli siteler"
   cloudflare-warp-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor): warp-cli + menüde "Cloudflare One Client". Servisi (warp-svc) açık gelir, VPN bağlanana kadar bağlanmaz; bkz. README
 )
@@ -35,5 +35,18 @@ for pkg in "${AUR_PACKAGES[@]}"; do
   # güncellemede yeniden iniyordu (Helium ~180 MB/gün). AUR tarifinin son değişiklik
   # tarihi kullanılır; tarif güncellenince değişir.
   epoch=$(runuser -u build -- git -C "/home/build/${pkg}" log -1 --format=%ct)
-  runuser -u build -- env PKGDEST=/output SOURCE_DATE_EPOCH="${epoch}" makepkg -s --noconfirm
+
+  makepkg_args=()
+  case "${pkg}" in
+    espanso)
+      # Tarif X11 ve Wayland sürümlerini ayrı ayrı derleyip testleri de derliyor (Rust, her
+      # biri birkaç dakika). Sadece Wayland sürümü derlenir: X11 derleme satırları silinir,
+      # testler atlanır. Tarif değişip satırlar bulunamazsa build durur.
+      runuser -u build -- sed -i '/export CARGO_TARGET_DIR=target-x11/,/--package espanso/d' PKGBUILD
+      if grep -q 'CARGO_TARGET_DIR=target-x11' PKGBUILD; then exit 1; fi
+      grep -q 'CARGO_TARGET_DIR=target-wayland' PKGBUILD
+      makepkg_args=(--nocheck --pkg espanso-wayland)
+      ;;
+  esac
+  runuser -u build -- env PKGDEST=/output SOURCE_DATE_EPOCH="${epoch}" makepkg -s --noconfirm "${makepkg_args[@]}"
 done
