@@ -40,12 +40,16 @@ for pkg in "${AUR_PACKAGES[@]}"; do
   case "${pkg}" in
     espanso)
       # Tarif X11 ve Wayland sürümlerini ayrı ayrı derleyip testleri de derliyor (Rust, her
-      # biri birkaç dakika). Sadece Wayland sürümü derlenir: X11 derleme satırları silinir,
-      # testler atlanır. Tarif değişip satırlar bulunamazsa build durur.
-      runuser -u build -- sed -i '/export CARGO_TARGET_DIR=target-x11/,/--package espanso/d' PKGBUILD
+      # biri birkaç dakika). Sadece Wayland sürümü derlenir: X11'in derleme satırları ve
+      # paket listesindeki adı silinir (makepkg'ın --pkg seçeneği artık yok), testler
+      # atlanır. Tarif değişip satırlar bulunamazsa build durur.
+      runuser -u build -- sed -i \
+        -e '/export CARGO_TARGET_DIR=target-x11/,/--package espanso/d' \
+        -e '/^pkgname=(/,/^)/{/espanso-x11/d}' PKGBUILD
       if grep -q 'CARGO_TARGET_DIR=target-x11' PKGBUILD; then exit 1; fi
       grep -q 'CARGO_TARGET_DIR=target-wayland' PKGBUILD
-      makepkg_args=(--nocheck --pkg espanso-wayland)
+      [[ "$(runuser -u build -- bash -c 'source PKGBUILD && echo "${pkgname[*]}"')" == espanso-wayland ]]
+      makepkg_args=(--nocheck)
       ;;
   esac
   runuser -u build -- env PKGDEST=/output SOURCE_DATE_EPOCH="${epoch}" makepkg -s --noconfirm "${makepkg_args[@]}"
