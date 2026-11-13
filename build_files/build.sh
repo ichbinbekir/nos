@@ -161,6 +161,7 @@ systemctl enable \
   libvirtd.socket \
   keyd.service \
   zapret.service \
+  warp-svc.service \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target
 

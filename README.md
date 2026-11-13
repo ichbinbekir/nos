@@ -178,17 +178,17 @@ Dosya kaydedilince espanso kendisi yeniden okur. Girişte kendiliğinden açılm
 
 Listeye site eklemek: `sudoedit /etc/zapret/ipset/zapret-hosts-user.txt` (satır başına bir alan adı), sonra `sudo systemctl restart zapret`. Kapatmak: `sudo systemctl disable --now zapret`.
 
-**Cloudflare WARP** ücretsiz VPN; hesap gerekmiyor. Bütün trafiği Cloudflare üzerinden geçirir (bölge seçilemez, en yakın sunucuya bağlanır). zapret işe yaramadığında ya da oyun gibi her bağlantının aşması gerektiğinde kullanılır. Paket servisini kendisi açmıyor (Arch paketleri servis açmaz); kullanmak için önce servisi aç. Arayüzü menüde "Cloudflare One Client" (sistem tepsisinde simge); terminalden:
+**Cloudflare WARP** ücretsiz VPN; hesap gerekmiyor. Bütün trafiği Cloudflare üzerinden geçirir (bölge seçilemez, en yakın sunucuya bağlanır). zapret işe yaramadığında ya da oyun gibi her bağlantının aşması gerektiğinde kullanılır. Arka plan servisi (`warp-svc`) açık gelir; VPN sen bağlanana kadar bağlanmaz. Arayüzü menüde "Cloudflare One Client" (sistem tepsisinde simge); terminalden:
 
 | İş | Komut |
 |---|---|
-| Servisi aç (her açılışta çalışsın) / kapat | `sudo systemctl enable --now warp-svc` / `sudo systemctl disable --now warp-svc` |
+| Servisi kapat / yeniden aç | `sudo systemctl disable --now warp-svc` / `sudo systemctl enable --now warp-svc` |
 | Tepsi simgesi her girişte açılsın / açılmasın | `systemctl --user enable --now warp-taskbar` / `systemctl --user disable --now warp-taskbar` |
 | İlk kez (bir kez) | `warp-cli registration new` |
 | Bağlan / bağlantıyı kes | `warp-cli connect` / `warp-cli disconnect` |
 | Durum | `warp-cli status` |
 
-Servis açıkken ve bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır.
+Bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır.
 
 ### Kişisel ayarlar (dotfiles)
 
