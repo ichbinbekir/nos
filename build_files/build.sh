@@ -193,5 +193,10 @@ ln -sf ../default.xml /etc/libvirt/qemu/networks/autostart/default.xml
 # ayarlarını korumak için yeni sürümleri .pacnew olarak bırakıyor; gerekmiyorlar.
 find /etc -name '*.pacnew' -delete
 
+# Donanım veritabanı (hwdb.bin) paket kurulumunda yeniden üretiliyor ve tarihi build anı
+# oluyor; içerik aynı olsa da imajın katmanı her gün değişip yeniden iniyordu. Tarihi,
+# kaynak dosyalarının (hwdb.d) en yenisine sabitlenir.
+touch -d "@$(stat -c %Y /usr/lib/udev/hwdb.d/* | sort -n | tail -n1)" /usr/lib/udev/hwdb.bin
+
 # Paketlerin /var altına koyduğu klasörler açılışta oluşturulsun (bkz. var-tmpfiles.sh).
 bash /ctx/var-tmpfiles.sh /usr/lib/tmpfiles.d/nos-var.conf

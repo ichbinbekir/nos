@@ -43,6 +43,11 @@ fi
 
 find /etc -name '*.pacnew' -delete
 
+# Donanım veritabanı (hwdb.bin) paket kurulumunda yeniden üretiliyor ve tarihi build anı
+# oluyor; içerik aynı olsa da imajın katmanı her gün değişip yeniden iniyordu. Tarihi,
+# kaynak dosyalarının (hwdb.d) en yenisine sabitlenir.
+touch -d "@$(stat -c %Y /usr/lib/udev/hwdb.d/* | sort -n | tail -n1)" /usr/lib/udev/hwdb.bin
+
 # Yeni paketlerin /var klasörleri (ortak imajınkiler nos-var.conf'ta).
 bash /ctx/var-tmpfiles.sh "/usr/lib/tmpfiles.d/nos-var-$machine.conf"
 
