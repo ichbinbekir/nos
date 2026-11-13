@@ -123,6 +123,16 @@ pacman -S --noconfirm --needed "${PACKAGES[@]}"
 
 # AUR paketleri (aur.sh tarafından derlendi). Bağımlılıkları depolardan gelir.
 find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U --noconfirm
+# distrobox 1.8.2.5 hatası: salt okunur klasörleri "ro:rslave" ile bağlıyor, podman bunu
+# reddediyor ("incorrect volume format"), kutu oluşturulamıyor. Doğrusu "ro,rslave"
+# (upstream'de düzeltildi, distrobox#2083; düzeltilmiş sürüm çıkmadı). Hata, crun'ın
+# podman info'daki bir satırında "runc" geçtiği için distrobox'ın runc yolunu seçmesiyle
+# ortaya çıkıyor. Düzeltilmiş sürüm gelince satır bulunmaz, adım kendiliğinden atlanır.
+if grep -qF ':ro${rslave}"' /usr/bin/distrobox-create; then
+  sed -i 's|:ro\${rslave}"|:ro,rslave"|' /usr/bin/distrobox-create
+  grep -qF ':ro,rslave"' /usr/bin/distrobox-create
+fi
+
 # espanso Wayland'de klavyeyi /dev/input'tan okuyor; bunun için kendi kurulum betiği bu izni
 # veriyor. Paket betiği değişirse diye açıkça verilir ve günlüğe yazılır (izin imaj katmanlarında
 # korunuyor; kwin_wayland'in izni de aynı yoldan geliyor).
