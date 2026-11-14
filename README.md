@@ -197,14 +197,9 @@ Bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır.
 - **bpfland:** Masaüstü için; arka planda ağır bir iş varken öndeki uygulamayı akıcı tutar.
 - **lavd:** Oyun için (Steam Deck için geliştirildi); gecikmeyi düşük tutar, pil tasarrufu modu var.
 
-| İş | Komut |
-|---|---|
-| Dene (bu oturum için) | `scxctl start -s bpfland` ya da `scxctl start -s lavd` |
-| Başkasına geç | `scxctl switch -s lavd` |
-| Hangisi çalışıyor | `scxctl get` |
-| Kapat (normal zamanlayıcıya dön) | `scxctl stop` |
+Denemek için bir terminalde `sudo scx_bpfland` ya da `sudo scx_lavd` çalıştır: terminal açık kaldıkça o zamanlayıcı kullanılır, `Ctrl+C` ile kapatınca normal zamanlayıcıya dönülür. Hangisinin çalıştığı: `cat /sys/kernel/sched_ext/root/ops` (boşsa normal zamanlayıcı).
 
-Bir zamanlayıcı hata yaparsa çekirdek kendiliğinden normal zamanlayıcıya döner; sistem çökmez. Yeniden başlatınca da normale döner. Beğendiğini kalıcı yapmak için `/etc/scx_loader.toml` dosyasına `default_sched = "scx_bpfland"` (ya da `"scx_lavd"`) yaz ve `sudo systemctl enable scx_loader` çalıştır.
+Bir zamanlayıcı hata yaparsa çekirdek kendiliğinden normal zamanlayıcıya döner; sistem çökmez. Yeniden başlatınca da normale döner. Birini kalıcı kullanmak istenirse açılışta başlatan küçük bir servis eklenir (`scx-tools` paketi ya da kendi servis dosyamız; şu an yok).
 
 ### Kişisel ayarlar (dotfiles)
 

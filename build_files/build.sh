@@ -110,7 +110,6 @@ PACKAGES=(
   python-dbus # keyd-application-mapper'ın KDE'de hangi pencerenin önde olduğunu öğrenmesi için
   chezmoi # Kişisel ayarlar (dotfiles): kurulum programı repodaki dotfiles/'ı ev klasörüne yazıyor; sonra eşitleme (bkz. README)
   scx-scheds # sched_ext zamanlayıcıları (bpfland, lavd vb.); kapalı gelir, bkz. README "İşlemci zamanlayıcısı"
-  scx-tools # scx_loader/scxctl: zamanlayıcıyı açma, değiştirme, kalıcı yapma (servisi kapalı gelir)
   gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
 
   # Sanallaştırma (QEMU/KVM)
