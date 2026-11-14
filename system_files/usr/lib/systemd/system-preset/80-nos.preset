@@ -1,0 +1,23 @@
+# systemd ilk açılışta (machine-id "uninitialized") bütün servislere varsayılanlarını
+# uygular; 90-systemd.preset kullanmadığımız birkaç servisi açıyor. İlk eşleşen satır
+# geçerli olduğu için bu dosya (80) onlardan önce okunur.
+
+# İnterneti NetworkManager yönetiyor. networkd açık kalınca networkd-wait-online hiç
+# gelmeyecek bağlantıyı 2 dakika bekliyordu (network-online.target ve ona bağlı zapret,
+# nos-update açılıştan 2 dk sonra başlıyordu).
+disable systemd-networkd.service
+disable systemd-networkd.socket
+disable systemd-networkd-varlink.socket
+disable systemd-networkd-varlink-metrics.socket
+disable systemd-networkd-resolve-hook.socket
+disable systemd-networkd-wait-online.service
+disable systemd-network-generator.service
+
+# Taşınabilir/şifreli ev klasörleri (homectl); kullanıcılar normal hesap.
+disable systemd-homed.service
+disable systemd-homed-activate.service
+
+# Sisteme eklenti katmanı (sysext/confext) takmak için; şu an kullanılmıyor.
+# Bir şey kullanmak isterse buradan açılmalı (bkz. CLAUDE.md).
+disable systemd-sysext.service
+disable systemd-confext.service
