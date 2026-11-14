@@ -190,6 +190,22 @@ Listeye site eklemek: `sudoedit /etc/zapret/ipset/zapret-hosts-user.txt` (satır
 
 Bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır.
 
+### İşlemci zamanlayıcısı (sched_ext)
+
+Çekirdek, işlemciyi programlara nasıl paylaştıracağını değiştirmeye izin veriyor (sched_ext). İmajda bu zamanlayıcılar var ama **kapalı**; normal çekirdek zamanlayıcısı kullanılıyor. Denemeye değer olanlar:
+
+- **bpfland:** Masaüstü için; arka planda ağır bir iş varken öndeki uygulamayı akıcı tutar.
+- **lavd:** Oyun için (Steam Deck için geliştirildi); gecikmeyi düşük tutar, pil tasarrufu modu var.
+
+| İş | Komut |
+|---|---|
+| Dene (bu oturum için) | `scxctl start -s bpfland` ya da `scxctl start -s lavd` |
+| Başkasına geç | `scxctl switch -s lavd` |
+| Hangisi çalışıyor | `scxctl get` |
+| Kapat (normal zamanlayıcıya dön) | `scxctl stop` |
+
+Bir zamanlayıcı hata yaparsa çekirdek kendiliğinden normal zamanlayıcıya döner; sistem çökmez. Yeniden başlatınca da normale döner. Beğendiğini kalıcı yapmak için `/etc/scx_loader.toml` dosyasına `default_sched = "scx_bpfland"` (ya da `"scx_lavd"`) yaz ve `sudo systemctl enable scx_loader` çalıştır.
+
 ### Kişisel ayarlar (dotfiles)
 
 Ev klasörüne giden ayarlar (ör. keyd eşlemesi) bu reponun [dotfiles/](dotfiles/) klasöründe, [chezmoi](https://www.chezmoi.io/) biçiminde (`dot_config/...` → `~/.config/...`). Kurulum programı depoyu `~/.local/share/chezmoi`'ye indirip ayarları ev klasörüne yazar; sonrası chezmoi ile:
