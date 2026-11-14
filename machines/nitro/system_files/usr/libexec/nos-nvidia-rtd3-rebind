@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# GEÇİCİ ÇÖZÜM, bkz. /usr/lib/modprobe.d/nos-nvidia-rtd3-rebind.conf. NVIDIA sürücüsü
+# yüklendikten hemen sonra (modprobe "install" kancası) uyku özelliğini "Not supported"
+# sayan her kartı sürücüden ayırıp yeniden bağlar. Aynı anda iki kez çalışmasın diye kilitli
+# (birden çok modprobe çağrısı yarışabiliyor). nvidia-powerd o sırada çalışıyorsa kartı
+# kaybedip kapanıyor; yeniden başlatılır.
+
+exec 9>/run/nos-nvidia-rtd3-rebind.lock
+flock 9
+
+rebound=0
+for f in /proc/driver/nvidia/gpus/*/power; do
+  [[ -e $f ]] || continue
+  grep -q 'Runtime D3 status: *Not supported' "$f" || continue
+  bdf="$(basename "$(dirname "$f")")"
+  echo "$bdf" >/sys/bus/pci/drivers/nvidia/unbind || continue
+  echo "$bdf" >/sys/bus/pci/drivers/nvidia/bind
+  logger -t nos-nvidia-rtd3 "$bdf yeniden bağlandı: $(head -n1 "$f")"
+  rebound=1
+done
+
+if ((rebound)) && systemctl -q is-enabled nvidia-powerd.service 2>/dev/null; then
+  systemctl --no-block restart nvidia-powerd.service
+fi
+exit 0
