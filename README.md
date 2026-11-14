@@ -192,19 +192,18 @@ Bağlıyken bilgisayar kapatılırsa WARP açılışta yeniden bağlanır.
 
 ### İşlemci zamanlayıcısı (sched_ext)
 
-Çekirdek, işlemciyi programlara nasıl paylaştıracağını değiştirmeye izin veriyor (sched_ext). İmajda bu zamanlayıcılar var ama **kapalı**; normal çekirdek zamanlayıcısı kullanılıyor. Denemeye değer olanlar:
+Çekirdek, işlemciyi programlara nasıl paylaştıracağını değiştirmeye izin veriyor (sched_ext). Açılışta **bpfland** açık geliyor (`scx_loader` servisi, ayarı `/etc/scx_loader.toml`). Başlıcaları:
 
 - **bpfland:** Masaüstü için; arka planda ağır bir iş varken öndeki uygulamayı akıcı tutar.
 - **lavd:** Oyun için (Steam Deck için geliştirildi); gecikmeyi düşük tutar, pil tasarrufu modu var.
 
 | İş | Komut |
 |---|---|
-| Dene (yeniden başlatana kadar) | `scxctl start -s bpfland` ya da `scxctl start -s lavd` |
-| Başkasına geç | `scxctl switch -s lavd` |
+| Başkasına geç (yeniden başlatana kadar) | `scxctl switch -s lavd` |
 | Hangisi çalışıyor | `scxctl get` |
-| Kapat (normal zamanlayıcıya dön) | `scxctl stop` |
+| Kapat (yeniden başlatana kadar normal zamanlayıcı) | `scxctl stop` |
 
-Bir zamanlayıcı hata yaparsa çekirdek kendiliğinden normal zamanlayıcıya döner; sistem çökmez. Yeniden başlatınca da normale döner. Beğendiğini kalıcı yapmak için `/etc/scx_loader.toml` dosyasına `default_sched = "scx_bpfland"` (ya da `"scx_lavd"`) yaz ve `sudo systemctl enable scx_loader` çalıştır.
+Bir zamanlayıcı hata yaparsa çekirdek kendiliğinden normal zamanlayıcıya döner; sistem çökmez. Açılıştakini kalıcı değiştirmek: `sudoedit /etc/scx_loader.toml` (`default_sched = "scx_lavd"`); tamamen kapatmak: `sudo systemctl disable --now scx_loader`.
 
 ### Kişisel ayarlar (dotfiles)
 

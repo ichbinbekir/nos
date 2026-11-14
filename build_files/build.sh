@@ -109,8 +109,8 @@ PACKAGES=(
   keyd # Tuş eşleme; pencereye göre de olabiliyor (ör. Sober/Roblox'ta ESDF → WASD). Ayarı ~/.config/keyd/app.conf, bkz. README
   python-dbus # keyd-application-mapper'ın KDE'de hangi pencerenin önde olduğunu öğrenmesi için
   chezmoi # Kişisel ayarlar (dotfiles): kurulum programı repodaki dotfiles/'ı ev klasörüne yazıyor; sonra eşitleme (bkz. README)
-  scx-scheds # sched_ext zamanlayıcıları (bpfland, lavd vb.); kapalı gelir, bkz. README "İşlemci zamanlayıcısı"
-  scx-tools # scxctl ve scx_loader: zamanlayıcıyı açma, değiştirme, kalıcı yapma (servisi kapalı gelir)
+  scx-scheds # sched_ext zamanlayıcıları (bpfland, lavd vb.); bpfland açılışta açık, bkz. README "İşlemci zamanlayıcısı"
+  scx-tools # scx_loader (açılışta /etc/scx_loader.toml'daki zamanlayıcıyı başlatır) ve scxctl (değiştirme, kapatma)
   gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
 
   # Sanallaştırma (QEMU/KVM)
@@ -174,6 +174,7 @@ systemctl enable \
   keyd.service \
   zapret.service \
   systemd-oomd.service \
+  scx_loader.service \
   warp-svc.service \
   NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
 systemctl set-default graphical.target

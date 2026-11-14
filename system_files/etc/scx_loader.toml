@@ -1,0 +1,5 @@
+# sched_ext: açılışta scx_loader bu zamanlayıcıyı başlatır (bkz. README, "İşlemci
+# zamanlayıcısı"). Değiştirmek: "scx_lavd" yaz ya da satırı silip normal zamanlayıcıya dön;
+# geçici olarak: scxctl switch -s lavd / scxctl stop.
+default_sched = "scx_bpfland"
+default_mode = "Auto"
