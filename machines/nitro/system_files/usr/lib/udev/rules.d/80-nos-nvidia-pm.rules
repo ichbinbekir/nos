@@ -1,7 +1,0 @@
-# NVIDIA kartının güç yönetimi Linux'a bırakılsın (power/control=auto); yoksa çekirdek kartı
-# hep açık tutuyor ve sürücünün uyku ayarı işe yaramıyor. NVIDIA'nın belgelediği kurallar
-# (sürücü belgesi, RTD3); ses aygıtı (snd_hda_intel) zaten kendisi "auto" yapıyor.
-ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
-ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
-ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
-ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
