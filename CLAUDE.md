@@ -168,7 +168,7 @@ Bekleyen işler ve sahibinden beklenen kararlar. Bitince buradan çıkarılır.
   - **Sıra:**
     1. Makine klasörü yapısı + CI + NVIDIA/Acer'ın `machines/nitro/`'ya taşınması: **yapıldı (8 Kasım); sahibi 9 Kasım'da `nos-nitro`'ya geçti, NVIDIA (615.78), nvidia-powerd, switcheroo, Acer platform_profile, ses kartı, early microcode doğrulandı.** Geçişten sonra `nos-update.timer` disabled bulundu (sahibi muhtemelen kalıcı kapattı; tekrar açması söylendi). İlk push'ta GHCR'de `nos-nitro` paketinin herkese açık olduğu kontrol edilmeli (yeni paketler özel açılabiliyor; bootc anonim çekiyor). Geçişten sonra: `nos-nitro`'da NVIDIA (`nvidia-smi`), `nvidia-powerd`, Acer modları ve `bootc status`'ta imzalı imaj doğrulanmalı.
     2. Kurulum ISO'su (her şeyi soran, ilk açılış ekranını gereksiz kılan): yazıldı, deneme bekliyor (aşağıda).
-    3. Geliştirme kutusu (aşağıda).
+    3. Geliştirme kutusu: sadece sahibinin bilgisayarında (aşağıda).
     4. Dotfiles (ayrı; chezmoi ile).
   - **README ve CLAUDE.md:** Kurallar "sahibinin donanımı" maddesi ortak/makine ayrımına göre güncellenecek.
 - **Plan (10 Kasım, sahibiyle konuşuldu, başlanmadı):**
@@ -177,13 +177,7 @@ Bekleyen işler ve sahibinden beklenen kararlar. Bitince buradan çıkarılır.
   - **Flatpak'ler:** Kurulum programı imajdaki listeyi (`/usr/share/nos/flatpaks/*.list` gibi, katman başına parça) okuyup chroot adımında `flatpak install --system` ile kurar (o adımda ağ açılmalı; şu an `--network none`). Açılış servisi yok (sahibi temiz kalmasını istedi); sonradan listeye eklenen mevcut sisteme kendiliğinden gelmez.
   - **Dev box:** Sahibi belki elle yapacak; şimdilik bir şey yapılmayacak. Otomatik istenirse: ilk girişte bir kez çalışan kullanıcı görevi (`distrobox assemble`, işaret dosyası); kurulumda yapmak kırılgan (kullanıcının rootless podman'ı yok).
   - **Kurulum ISO'su Fedora imajlarını kuramaz** (ostree + GRUB düzeni, `/etc`/`/var` yolları, SELinux etiketleri); hedef değil.
-- **Geliştirme kutusu (distrobox, mimariden sonra):**
-  - Go, Python (uv), Node tek kutuda; birbirine karışmıyorlar. Proje başına sürüm için mise.
-  - Kutu bir Containerfile'dan build edilir (ör. `boxes/dev/`, haftalık CI, `ghcr.io/ichbinbekir/box-dev`).
-  - Kutular `distrobox assemble` ayar dosyasıyla oluşturulur: ad `box-dev`, ev klasörü `~/.var/virtual/dev`, `~/.ssh` ve `~/.gitconfig` bağlı.
-  - Güncelleme ya da bozulmada kutu silinip imajdan yeniden kurulur; ev klasörü kalır.
-  - Flutter kutusu (`box-flutter`, `~/Documents/Mobil-CLAUDE.md`) boyutu yüzünden ayrı kalır.
-  - Git ana sistemde kalır (küçük, temel araç; sahibi kaldırmayı düşündü, önerilmedi).
+- **Geliştirme kutusu (16 Kasım):** Sahibinin isteğiyle **projeye girmez** (imaj, dotfiles, README yok); sadece sahibinin bilgisayarında. Containerfile/CI de yapılmadı (birkaç pacman paketi için gereksiz). Tarif `~/.config/distrobox/dev.ini` (`distrobox assemble`; yeniden kurmak: `distrobox assemble create --replace --file ~/.config/distrobox/dev.ini`): `box-dev`, `archlinux:base-devel`, git, openssh, go, nodejs, npm, python, python-pip, uv; ev klasörü `~/.var/virtual/dev`; `~/.ssh` kutunun evine bağlı, git `GIT_CONFIG_GLOBAL=$HOME/.gitconfig`, `PIP_BREAK_SYSTEM_PACKAGES=1`. Doğrulandı: araçlar, GitHub'a SSH, `git config`, `pip install` (kutunun `~/.local`'ına). Sahibinin diğer kutuları: `box-flutter` (`~/Documents/Mobil-CLAUDE.md`), `box-speedtest`.
 
 - **Kurulum ISO'su (yazıldı 9 Kasım; "bütün disk" 10 Kasım'da VM'de iki kez, ikisinde de elle bir düzeltmeyle çalıştı):** `iso/` + `build-iso.yml`. Sıradaki: `/var/tmp` düzeltmesiyle yeni ISO üretip "bütün disk"i baştan sona elle müdahalesiz denemek. **"Boş alana" ve "bölümün yerine" (Windows yanına) kurulumları hiç denenmedi** (sahibi interneti yavaş olduğu için şimdilik istemedi; gerçek kurulumdan önce denenmeli: diske önceden EFI + MSR + NTFS bölümü ve ≥40 GB boş yer). Çalışınca: `nos-firstboot` (+ servisi, `core/services.txt`'deki satır, `systemd-firstboot` maskesi kalabilir) kaldırılır, README "Elle kurulum"daki ilk açılış cümlesi güncellenir. (`build-disk.yml` ve disk imajı tarifleri 10 Kasım'da kaldırıldı.) Elle `bootc install` ile kurulanlar için ilk açılış ekranı olmayınca kullanıcı olmaz: README'ye elle kullanıcı ekleme (ya da yine kurulum ISO'su) yazılmalı.
 - **Dual boot (Windows ile):** İsteniyor; kurulum ISO'su bunu yapacak (`bootc install to-filesystem` ile hazır bölüme).
