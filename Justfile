@@ -10,7 +10,7 @@ default:
 
 # İmajı build eder (bootc, bootc_image imajından kopyalanır)
 build $image_name=image_name $tag=tag $bootc_image=bootc_image:
-    podman build --pull=newer --file Containerfile --build-arg BOOTC_IMAGE="${bootc_image}" --tag "${image_name}:${tag}" .
+    podman build --pull=newer --file core/Containerfile --build-arg BOOTC_IMAGE="${bootc_image}" --tag "${image_name}:${tag}" .
 
 # Makine imajını (nos-<makine>) ortak imajın üzerine build eder (machines/<makine>/)
 build-machine machine $base_image=base_image $tag=tag:

@@ -7,7 +7,7 @@
 # imajdaki olarak kalıyor (yeniden üretmek build'i ~1 dk uzatıyordu): makine paketleri
 # initrd'ye girmemeli (NVIDIA 40-nos-omit.conf ile dışarıda; işlemci mikrokodları ortak
 # imajda). Bir makine initrd'de bir şey isterse burada `bash /ctx/scripts/bootc/initramfs.sh`
-# çağrılmalı; os-release'teki VERSION_ID'yi önce çıkarıp sonra eklemek gerekir (bkz. Containerfile).
+# çağrılmalı; os-release'teki VERSION_ID'yi önce çıkarıp sonra eklemek gerekir (bkz. core/Containerfile).
 #
 # Kullanım: machine.sh <makine adı>
 

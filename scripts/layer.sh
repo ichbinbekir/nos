@@ -3,7 +3,7 @@
 # masaüstleri. Katman klasöründe (hepsi isteğe bağlı):
 #   packages.txt  kurulacak paketler (her satıra bir paket, # sonrası yorum)
 #   aur.txt       AUR paketleri (aynı biçim); aur-builder aşamasında derlenir (aur.sh) ve
-#                 /aur'dan kurulur. Şimdilik sadece ortak imajda (Containerfile /aur'u bağlıyor).
+#                 /aur'dan kurulur. Şimdilik sadece ortak imajda (core/Containerfile /aur'u bağlıyor).
 #   system_files/ köke olduğu gibi kopyalanan dosyalar
 #   services.txt  etkinleştirilecek servisler (aynı biçim)
 #   setup.sh      listelere sığmayan işler; en son çalışır
@@ -20,7 +20,7 @@ name="${2:?katman adı verilmedi}"
 # Satırlardan yorumları ve boşlukları ayıklar.
 list() { [[ -f $1 ]] && sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$1" || true; }
 
-# Paket veritabanı burada güncellenmiyor (-y yok). Ortak imajda Containerfile bunu hemen
+# Paket veritabanı burada güncellenmiyor (-y yok). Ortak imajda core/Containerfile bunu hemen
 # önce yapıyor. Makine imajlarında bilerek: ortak imajın kurulduğu veritabanıyla aynı
 # sürümler gelsin. Özellikle nvidia-open çekirdeğin tam sürümü için derlendiği için yeni bir
 # veritabanı çekirdekle uyuşmayan bir sürüm getirebilirdi. Makine build'i CI'da ortak
