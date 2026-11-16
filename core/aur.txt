@@ -1,0 +1,7 @@
+# AUR paketleri. Ayrı bir build aşamasında derlenir (scripts/aur.sh), imaja sadece paket
+# dosyaları geçer; bağımlılıkları depolardan gelir. Her satıra bir paket, # sonrası yorum.
+
+helium-browser-bin # Tarayıcı
+espanso # Metin kısaltmaları (ör. ":date" → tarih). Kaynaktan, sadece Wayland sürümü (scripts/aur.sh). Hazır Debian paketi (espanso-wayland-bin) Arch'ın wxWidgets'ıyla uyumsuzdu, açılışta çöküyordu
+zapret-git # DPI engelini aşma (bol-van/zapret). Ayarı /etc/zapret, bkz. README "Engelli siteler"
+cloudflare-warp-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor): warp-cli + menüde "Cloudflare One Client". Servisi (warp-svc) açık gelir, VPN bağlanana kadar bağlanmaz; bkz. README

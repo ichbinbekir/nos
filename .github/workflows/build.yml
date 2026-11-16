@@ -20,8 +20,8 @@ on:
       - '.github/workflows/build-iso.yml'
       # Sadece bootc imajını ilgilendiren dosyalar; onları build-bootc.yml build eder.
       # İki workflow birbirinden bağımsız: yeni bootc bir sonraki build'de (04:00 ya da elle) alınır.
-      - 'build_files/bootc/build-bootc.sh'
-      - 'build_files/bootc/Containerfile'
+      - 'scripts/bootc/build-bootc.sh'
+      - 'scripts/bootc/Containerfile'
       - '.github/workflows/build-bootc.yml'
   pull_request:
     branches:
@@ -76,7 +76,7 @@ jobs:
           echo "BOOTC_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc:latest" >> "$GITHUB_ENV"
 
       # machines/ altındaki her klasör bir makine imajı. Yeni makine için klasör eklemek yeter
-      # (bir de system_files/etc/containers/policy.json'a imaj adı).
+      # (bir de core/system_files/etc/containers/policy.json'a imaj adı).
       - name: List machines
         id: machines
         run: |

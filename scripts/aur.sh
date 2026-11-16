@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# AUR paketlerini derleyip /output'a koyar. Bu betik ayrı bir build aşamasında
-# çalışır; derleme araçları ve "build" kullanıcısı son imaja girmez.
+# Bir katmanın aur.txt'sindeki AUR paketlerini derleyip /output'a koyar. Bu betik ayrı bir
+# build aşamasında çalışır; derleme araçları ve "build" kullanıcısı son imaja girmez.
+#
+# Kullanım: aur.sh <aur.txt>
 
 set -xeuo pipefail
 
-AUR_PACKAGES=(
-  helium-browser-bin # Tarayıcı
-  espanso # Metin kısaltmaları (ör. ":date" → tarih). Kaynaktan, sadece Wayland sürümü (aşağıda). Hazır Debian paketi (espanso-wayland-bin) Arch'ın wxWidgets'ıyla uyumsuzdu, açılışta çöküyordu
-  zapret-git # DPI engelini aşma (bol-van/zapret). Ayarı /etc/zapret, bkz. README "Engelli siteler"
-  cloudflare-warp-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor): warp-cli + menüde "Cloudflare One Client". Servisi (warp-svc) açık gelir, VPN bağlanana kadar bağlanmaz; bkz. README
-)
+mapfile -t AUR_PACKAGES < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "${1:?AUR listesi verilmedi}")
 
 pacman -Syu --noconfirm --needed base-devel git
 

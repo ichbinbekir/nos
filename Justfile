@@ -18,7 +18,7 @@ build-machine machine $base_image=base_image $tag=tag:
 
 # bootc'yi derleyip sadece onu içeren küçük imajı build eder. version boşsa en son sürüm.
 build-bootc $version="" $image_name="nos-bootc":
-    podman build --pull=newer --file build_files/bootc/Containerfile --build-arg BOOTC_VERSION="${version}" --tag "${image_name}:latest" build_files/bootc
+    podman build --pull=newer --file scripts/bootc/Containerfile --build-arg BOOTC_VERSION="${version}" --tag "${image_name}:latest" scripts/bootc
 
 # İmajı, güncellemelerde sadece değişen kısımlar indirilecek şekilde katmanlara böler (ublue-os/image-template, Apache-2.0)
 rechunk $image_name=image_name $tag=tag:

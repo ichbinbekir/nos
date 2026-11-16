@@ -1,0 +1,23 @@
+# Açılışta etkin olacak servisler. Her satıra bir servis, # sonrası yorum.
+# Yeni bir uygulamanın servisi için burada karar verilmez: Arch paketi açmıyorsa kapalı kalır
+# (istisnalar aşağıda yorumlu, sahibi özellikle istedi).
+
+sddm.service
+NetworkManager.service
+NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
+bluetooth.service
+ufw.service
+power-profiles-daemon.service
+systemd-resolved.service
+systemd-timesyncd.service
+nos-firstboot.service
+nos-update.timer
+fstrim.timer
+snapper-timeline.timer
+snapper-cleanup.timer
+libvirtd.socket
+keyd.service
+zapret.service # sahibinin isteği
+systemd-oomd.service # sahibinin isteği
+scx_loader.service # sahibinin isteği: bpfland açılışta açık
+warp-svc.service # sahibinin isteği

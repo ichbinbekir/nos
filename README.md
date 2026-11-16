@@ -22,7 +22,7 @@ En temel amaç: **açınca çalışan, rahat kullanılan, hafif bir makine.** Bu
 |---|---|---|
 | `ghcr.io/ichbinbekir/nos-nitro` | `nos` + Acer Nitro 16'nın sürücüleri ve ayarları (Intel grafik, ses kartı, NVIDIA, Acer güç modları) | Dizüstü |
 
-Makine imajları [machines/](machines/) altında tanımlı (paket listesi, servisler, ek dosyalar). Yeni bir bilgisayar için oraya bir klasör eklenir. GitHub `nos`'u bir kez build eder, sonra her makine imajını onun üzerine kurup yayınlar.
+Ortak imaj [core/](core/) altında, makine imajları [machines/](machines/) altında tanımlı; ikisi de aynı düzende: düz yazı paket listesi (`packages.txt`), servisler (`services.txt`) ve imaja kopyalanan dosyalar (`system_files/`). Yeni bir bilgisayar için `machines/` altına bir klasör eklenir. GitHub `nos`'u bir kez build eder, sonra her makine imajını onun üzerine kurup yayınlar.
 
 Bu iki kuralın pratikteki sonuçlarından örnekler:
 
@@ -46,7 +46,7 @@ Bu iki kuralın pratikteki sonuçlarından örnekler:
 - **Araçlar:** fish, fastfetch, htop, unzip, git, vim (varsayılan editör), ssh istemcisi, man sayfaları, Distrobox, Podman, Python, Flatpak (Flathub hazır ekli)
 - **Görünüm:** Sistem adı her yerde `nos` olarak görünür. fastfetch'te kendi logosu var: mavi bir NOS (nitro) tüpü. İsim de buradan geliyor.
 
-Tam liste: [build_files/build.sh](build_files/build.sh) ve [build_files/aur.sh](build_files/aur.sh).
+Tam liste: [core/packages.txt](core/packages.txt) ve [core/aur.txt](core/aur.txt).
 
 Başka bir uygulama gerekirse sırasıyla tercih edilen yollar:
 1. **Flatpak** (Discover'dan ya da `flatpak install`)
@@ -72,7 +72,7 @@ Kurulum için nos'un kendi kurulum USB'si var (Arch'ın ISO'sundan küçük, sad
 
 Kullanıcının kabuğu fish; `root` hesabı kilitli, yönetici işleri için `sudo` (kurulumdaki kullanıcı `sudo` kullanabilir). Ev dizininin otomatik snapshot'ları kurulumda ayarlanır.
 
-**Kullanıcı grupları:** Kurulumda oluşturulan kullanıcı imajdaki listedeki gruplara eklenir: [system_files/usr/share/nos/user-groups](system_files/usr/share/nos/user-groups) (şu an `wheel`: sudo, `libvirt`: sanal makineler, `keyd`: pencereye göre tuş eşleme, `gamemode`: GameMode'un oyun ayarları). Liste kurulum USB'sinde değil imajda durur; kurulum programı onu kurduğu imajın içinden okur, imajda olmayan grup atlanır. Yeni bir grup eklemek için:
+**Kullanıcı grupları:** Kurulumda oluşturulan kullanıcı imajdaki listedeki gruplara eklenir: [core/system_files/usr/share/nos/user-groups](core/system_files/usr/share/nos/user-groups) (şu an `wheel`: sudo, `libvirt`: sanal makineler, `keyd`: pencereye göre tuş eşleme, `gamemode`: GameMode'un oyun ayarları). Liste kurulum USB'sinde değil imajda durur; kurulum programı onu kurduğu imajın içinden okur, imajda olmayan grup atlanır. Yeni bir grup eklemek için:
 
 1. Dosyaya satır başına bir grup yaz (`#`'dan sonrası açıklama), commit + push. Bir sonraki imajla birlikte yeni kurulumlarda geçerli olur; USB'yi yeniden üretmek gerekmez.
 2. Var olan kullanıcıya kendiliğinden verilmez, bir kez elle: `sudo usermod -aG <grup> $USER`, sonra yeniden başlat (oturumu kapatıp açmak yetmeyebilir). Hangi gruplarda olduğunu görmek: `groups`.
@@ -248,9 +248,9 @@ Kurulu sistem de güncellemeleri bu anahtarla doğruluyor: `nos-nitro` imajı bu
 
 ## Lisans
 
-[MIT](LICENSE). İstisnalar: [build_files/bootc/](build_files/bootc/) ve Justfile'daki `rechunk` tarifi Apache-2.0, [iso/](iso/) profili (Arch'ın archiso `releng` profilinden) GPL-3.0-or-later ile, alındıkları projelerin lisansıyla kalıyor.
+[MIT](LICENSE). İstisnalar: [scripts/bootc/](scripts/bootc/) ve Justfile'daki `rechunk` tarifi Apache-2.0, [iso/](iso/) profili (Arch'ın archiso `releng` profilinden) GPL-3.0-or-later ile, alındıkları projelerin lisansıyla kalıyor.
 
 ## Teşekkürler
 
-- [bootcrew/mono](https://github.com/bootcrew/mono): Arch Linux'u bootc ile çalıştırma yöntemi. [build_files/bootc/](build_files/bootc/) altındaki betikler oradan alındı (Apache-2.0).
+- [bootcrew/mono](https://github.com/bootcrew/mono): Arch Linux'u bootc ile çalıştırma yöntemi. [scripts/bootc/](scripts/bootc/) altındaki betikler oradan alındı (Apache-2.0).
 - [ublue-os/image-template](https://github.com/ublue-os/image-template): Repo düzeni ve build süreci.

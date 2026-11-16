@@ -1,12 +1,13 @@
 # bootc Arch depolarında yok. Kaynak koddan derlenmiş hali ayrı bir imajda duruyor
-# (build_files/bootc/Containerfile, .github/workflows/build-bootc.yml); burada sadece
+# (scripts/bootc/Containerfile, .github/workflows/build-bootc.yml); burada sadece
 # dosyaları kopyalanır.
 ARG BOOTC_IMAGE=ghcr.io/ichbinbekir/nos-bootc:latest
 
-# Build betikleri ve sistem dosyaları ayrı bir aşamada tutulur, son imaja kopyalanmaz.
+# Build betikleri (scripts/) ve ortak katman (core/) ayrı bir aşamada tutulur, son imaja
+# kopyalanmaz.
 FROM scratch AS ctx
-COPY build_files /
-COPY system_files /system_files
+COPY scripts /scripts
+COPY core /core
 
 FROM ${BOOTC_IMAGE} AS bootc
 
@@ -16,7 +17,7 @@ FROM docker.io/archlinux/archlinux:latest AS base
 # bu aşamada ayrı bir kullanıcı açılır. Son imaja sadece paket dosyaları geçer.
 FROM base AS aur-builder
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
-    bash /ctx/aur.sh
+    bash /ctx/scripts/aur.sh /ctx/core/aur.txt
 
 FROM base AS system
 
@@ -27,6 +28,11 @@ COPY --from=bootc / /
 RUN grep "= */var" /etc/pacman.conf | sed "/= *\/var/s/.*=// ; s/ //" | xargs -n1 sh -c 'mkdir -p "/usr/lib/sysimage/$(dirname $(echo $1 | sed "s@/var/@@"))" && mv -v "$1" "/usr/lib/sysimage/$(echo "$1" | sed "s@/var/@@")"' '' && \
     sed -i -e "/= *\/var/ s/^#//" -e "s@= */var@= /usr/lib/sysimage@g" -e "/DownloadUser/d" /etc/pacman.conf
 
+# Resmi Arch Docker imajı yer kazanmak için man sayfalarını, belgeleri ve çevirileri
+# kurmuyor (pacman.conf sonundaki NoExtract satırları). Normal bir Arch kurulumundaki gibi
+# olsun diye bu satırlar silinir ve önceden kurulu paketler, eksik dosyaları gelsin diye
+# yeniden kurulur. Sonra ortak katman (core/: paketler, AUR paketleri, system_files,
+# servisler, setup.sh; bkz. scripts/layer.sh).
 # /run ve /tmp tmpfs olarak bağlanır: paket kurulumu sırasında oluşan çalışma
 # zamanı dosyaları imaja girmez (bootc container lint).
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
@@ -34,11 +40,14 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/usr/lib/sysimage/cache/pacman/pkg \
     --mount=type=tmpfs,dst=/run \
     --mount=type=tmpfs,dst=/tmp \
-    bash /ctx/build.sh
+    sed -i '/^NoExtract/d' /etc/pacman.conf && \
+    pacman -Syu --noconfirm && \
+    pacman -Qqn | pacman -S --noconfirm - && \
+    bash /ctx/scripts/layer.sh /ctx/core core
 
 RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
-    bash /ctx/bootc/initramfs.sh
+    bash /ctx/scripts/bootc/initramfs.sh
 
 # Sürüm (build tarihi) os-release'e initramfs üretildikten SONRA eklenir. bootc açılış
 # menüsündeki adı buradan alıyor ("nos 20261017"); dracut ise os-release'i initrd'ye
@@ -47,7 +56,7 @@ RUN echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     sed -i 's|^HOME=.*|HOME=/var/home|' "/etc/default/useradd" && \
-    bash /ctx/bootc/bootc-rootfs.sh
+    bash /ctx/scripts/bootc/bootc-rootfs.sh
 
 LABEL containers.bootc 1
 

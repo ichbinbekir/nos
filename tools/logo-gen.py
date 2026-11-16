@@ -5,14 +5,14 @@ Mavi gövde, turuncu etiket, üzerinde beyaz NOS harfleri (N daha uzun) ve N'nin
 üstünden çıkıp O ile S'nin üstünden sağa uzanan ok; üstte koyu tutamak ve krom vana.
 Sahibinin seçimi: "c" versiyonu, açık mavi renk takımı.
 
-Renkler (fastfetch $1..$5; system_files/etc/xdg/fastfetch/config.jsonc ile aynı olmalı):
+Renkler (fastfetch $1..$5; core/system_files/etc/xdg/fastfetch/config.jsonc ile aynı olmalı):
   $1 gövde (açık mavi)   $2 harfler ve ok (beyaz)   $3 etiket (turuncu)
   $4 tutamak (koyu gri)   $5 vana (krom / açık gri)
 
 Çalıştır: python tools/logo-gen.py             bütün versiyonların renkli önizlemesi
           python tools/logo-gen.py --plain     renksiz
           python tools/logo-gen.py --install   seçilen versiyonu imaja yazar
-                                               (system_files/usr/share/nos/fastfetch-logo.txt)
+                                               (core/system_files/usr/share/nos/fastfetch-logo.txt)
 """
 
 import math
@@ -20,7 +20,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-INSTALL_PATH = os.path.join(HERE, "..", "system_files", "usr", "share", "nos", "fastfetch-logo.txt")
+INSTALL_PATH = os.path.join(HERE, "..", "core", "system_files", "usr", "share", "nos", "fastfetch-logo.txt")
 SELECTED = "c"
 
 CX = 14.0  # gövde ortası

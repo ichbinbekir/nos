@@ -24,7 +24,7 @@ SOFTWARE.
 
 Exceptions (these parts keep their original licenses):
 
-- build_files/bootc/: from bootcrew/mono, see build_files/bootc/LICENSE
+- scripts/bootc/: from bootcrew/mono, see scripts/bootc/LICENSE
   (Apache License 2.0).
 - The `rechunk` recipe in Justfile: from ublue-os/image-template
   (https://github.com/ublue-os/image-template), Apache License 2.0.

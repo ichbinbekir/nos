@@ -1,0 +1,108 @@
+# Ortak imajın (nos) paketleri. Her satıra bir paket, # sonrası yorum.
+# Kurallar (bkz. README.md ve CLAUDE.md): Hafif; Linux'ta normalde bulunan genel araçlar kalır.
+# Ekran kartı ve ses kartı sürücüleri makine imajlarında (machines/).
+
+# bootc ve önyükleme (bootcrew/mono)
+base
+linux
+linux-firmware
+# İşlemci mikrokodları; initramfs'in başına giriyor, açılışta işlemciye uyan uygulanır
+# (diğeri yok sayılır, birkaç MB). Ortak imajda ki makine imajları initramfs'i yeniden
+# üretmek zorunda kalmasın.
+intel-ucode
+amd-ucode
+dracut
+ostree
+bubblewrap
+skopeo
+btrfs-progs # initramfs'ten önce kurulu olmalı (btrfs diskten açılış)
+e2fsprogs
+xfsprogs
+dosfstools
+ntfs-3g # Windows bölümleri ve NTFS diskler
+dbus
+dbus-glib
+glib2
+shadow
+
+zram-generator # Sıkıştırılmış RAM takası (ayarı system_files'ta)
+plymouth # Açılışta yazılar yerine sade animasyon (bgrt teması: üretici logosu + dönen simge). initramfs'ten önce kurulu olmalı
+
+# Sistem
+sudo
+git
+vim
+openssh # sshd açılmıyor, sadece istemci olarak kullanılıyor
+man-db
+htop
+unzip
+lm_sensors # Isı sensörleri (htop, KDE Sistem İzleyici; sensors komutu)
+networkmanager
+bluez
+bluez-utils
+ufw
+power-profiles-daemon
+pipewire
+pipewire-audio # Bluetooth ses desteği bu pakette
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+noto-fonts
+noto-fonts-emoji
+
+# KDE Plasma
+plasma-desktop
+sddm
+sddm-kcm
+konsole
+dolphin
+bluedevil
+plasma-nm
+plasma-pa
+powerdevil
+kscreen
+xdg-desktop-portal-kde
+kwalletmanager
+kde-gtk-config
+breeze-gtk
+ffmpegthumbs
+kdegraphics-thumbnailers
+ark
+spectacle
+# Spectacle'ın ekran görüntüsündeki yazıyı okuma (OCR) özelliği için dil verisi.
+# Belirtilmezse pacman 128 dil arasından ilkini (Afrikaanca) seçiyor.
+tesseract-data-eng
+tesseract-data-tur
+flatpak
+flatpak-kcm
+discover
+kate # kwrite bu pakette
+kdeconnect
+plasma-systemmonitor
+kinfocenter
+plasma-disks
+plasma-firewall # Sistem Ayarları'nda ufw sayfası
+snapper # Ev dizininin otomatik snapshot'ları (ayarı kurulum programı yapıyor)
+btrfs-assistant # Snapshot'ları ve btrfs'i grafik arayüzden yönetme
+
+# Araçlar
+fish
+fastfetch
+distrobox
+podman
+python
+gum # İlk kurulum ekranının (nos-firstboot) arayüzü
+keyd # Tuş eşleme; pencereye göre de olabiliyor (ör. Sober/Roblox'ta ESDF → WASD). Ayarı ~/.config/keyd/app.conf, bkz. README
+python-dbus # keyd-application-mapper'ın KDE'de hangi pencerenin önde olduğunu öğrenmesi için
+chezmoi # Kişisel ayarlar (dotfiles): kurulum programı repodaki dotfiles/'ı ev klasörüne yazıyor; sonra eşitleme (bkz. README)
+scx-scheds # sched_ext zamanlayıcıları (bpfland, lavd vb.); bpfland açılışta açık, bkz. README "İşlemci zamanlayıcısı"
+scx-tools # scx_loader (açılışta /etc/scx_loader.toml'daki zamanlayıcıyı başlatır) ve scxctl (değiştirme, kapatma)
+gamemode # Oyun açıkken işlemciyi performans moduna alır (Feral). Flatpak oyunlar/Steam portal üzerinden kullanır; servis istenince kendiliğinden başlar
+
+# Sanallaştırma (QEMU/KVM)
+qemu-desktop # Sanal makineyi çalıştıran program; ekran (SPICE), ses, USB aktarma desteğiyle. qemu-base'de ekran desteği yok, virt-manager'la ekran açılmaz
+libvirt # Sanal makineleri ve ağlarını yöneten servis. Arayüzü virt-manager (Flatpak) buna bağlanır
+dnsmasq # Sanal makinelerin ağı (libvirt NAT ağı DHCP/DNS için kullanıyor)
+edk2-ovmf # Sanal makinede UEFI açılış (nos imajını denemek için şart)
+swtpm # Sanal TPM (Windows 11 için)
