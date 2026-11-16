@@ -1,16 +1,16 @@
 # dotfiles
 
-Kişisel ayarlar (ev klasörüne gidenler). Kurulum programı bunları
-[chezmoi](https://www.chezmoi.io/) ile yeni kullanıcının ev klasörüne yazıyor; eşitleme de
-chezmoi ile (bkz. ana README, "Kişisel ayarlar"). Reponun kökündeki `.chezmoiroot`
-chezmoi'ye sadece bu klasörü kullanmasını söylüyor. Bu README ev klasörüne kopyalanmaz
+Personal settings (the ones that go into the home folder). The installer writes them into the
+new user's home folder with [chezmoi](https://www.chezmoi.io/); syncing is done with chezmoi too
+(see the main README, "Personal settings"). The `.chezmoiroot` file at the root of the repo
+tells chezmoi to use only this folder. This README is not copied into the home folder
 (`.chezmoiignore`).
 
-Dosya adları chezmoi'nin biçiminde: `dot_` ile başlayan ad ev klasöründe `.` ile başlar.
-Örneğin `dot_config/keyd/app.conf` → `~/.config/keyd/app.conf`. `symlink_` ile başlayan dosya
-bir bağlantı olur, içeriği bağlantının hedefi (ör. `dot_config/systemd/user/default.target.wants/symlink_espanso.service`:
-imajdaki espanso servisini açar; `systemctl --user enable espanso` ile aynı şey).
+File names follow chezmoi's format: a name starting with `dot_` starts with `.` in the home folder.
+For example `dot_config/keyd/app.conf` → `~/.config/keyd/app.conf`. A file starting with `symlink_`
+becomes a symbolic link, and its content is the link's target (e.g. `dot_config/systemd/user/default.target.wants/symlink_espanso.service`:
+enables the espanso service from the image; the same as `systemctl --user enable espanso`).
 
-İçindekiler: fish (`arrow` istemi, karşılama kapalı), espanso kısaltmaları, keyd eşlemesi.
+Contents: fish (`arrow` prompt, greeting off), espanso abbreviations, keyd mapping.
 
-Kurulum programı kullanılmadan: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.
+Without the installer: `chezmoi init --apply https://github.com/ichbinbekir/nos.git`.

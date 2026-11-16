@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Kaynak: bootcrew/mono shared/bootc-rootfs.sh (Apache-2.0, bkz. LICENSE).
-# Değişiklik: /opt, /var/opt'a yönlendirilmiyor, imajın içinde gerçek bir dizin olarak
-# kalıyor. AUR paketleri (örn. helium-browser-bin) /opt'a kuruluyor; /opt /var'a
-# yönlendirilseydi bu dosyalar silinirdi.
+# Source: bootcrew/mono shared/bootc-rootfs.sh (Apache-2.0, see LICENSE).
+# Change: /opt is not redirected to /var/opt; it stays a real directory inside the image.
+# AUR packages (e.g. helium-browser-bin) install to /opt; if /opt were redirected to /var
+# these files would be deleted.
 
 set -xeuo pipefail
 

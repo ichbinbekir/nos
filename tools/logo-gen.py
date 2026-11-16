@@ -1,18 +1,18 @@
-r"""nos fastfetch logosunu (NOS tüpü) üretir. İmaj build'inin parçası değil; logoyu
-değiştirmek için elle çalıştırılır.
+r"""Generates the nos fastfetch logo (NOS bottle). Not part of the image build; run it by
+hand to change the logo.
 
-Mavi gövde, turuncu etiket, üzerinde beyaz NOS harfleri (N daha uzun) ve N'nin sağ
-üstünden çıkıp O ile S'nin üstünden sağa uzanan ok; üstte koyu tutamak ve krom vana.
-Sahibinin seçimi: "c" versiyonu, açık mavi renk takımı.
+Blue body, orange label with white NOS letters on it (N is taller) and an arrow starting at
+the top right of N and running right above O and S; a dark handle and a chrome valve on top.
+Owner's choice: variant "c", light blue palette.
 
-Renkler (fastfetch $1..$5; core/system_files/etc/xdg/fastfetch/config.jsonc ile aynı olmalı):
-  $1 gövde (açık mavi)   $2 harfler ve ok (beyaz)   $3 etiket (turuncu)
-  $4 tutamak (koyu gri)   $5 vana (krom / açık gri)
+Colors (fastfetch $1..$5; must match core/system_files/etc/xdg/fastfetch/config.jsonc):
+  $1 body (light blue)   $2 letters and arrow (white)   $3 label (orange)
+  $4 handle (dark gray)   $5 valve (chrome / light gray)
 
-Çalıştır: python tools/logo-gen.py             bütün versiyonların renkli önizlemesi
-          python tools/logo-gen.py --plain     renksiz
-          python tools/logo-gen.py --install   seçilen versiyonu imaja yazar
-                                               (core/system_files/usr/share/nos/fastfetch-logo.txt)
+Run: python tools/logo-gen.py             colored preview of all variants
+     python tools/logo-gen.py --plain     without colors
+     python tools/logo-gen.py --install   writes the selected variant into the image
+                                          (core/system_files/usr/share/nos/fastfetch-logo.txt)
 """
 
 import math
@@ -23,13 +23,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 INSTALL_PATH = os.path.join(HERE, "..", "core", "system_files", "usr", "share", "nos", "fastfetch-logo.txt")
 SELECTED = "c"
 
-CX = 14.0  # gövde ortası
-R = 12.5  # gövde yarı genişliği
-DOME = 5.0  # omuz yüksekliği (satır)
-BODY = 15.0  # düz gövde yüksekliği (satır)
-LABEL_TOP, LABEL_ROWS = 2, 8  # etiket: düz gövdenin 2. satırından başlayıp 8 satır
+CX = 14.0  # body center
+R = 12.5  # body half-width
+DOME = 5.0  # shoulder height (rows)
+BODY = 15.0  # straight body height (rows)
+LABEL_TOP, LABEL_ROWS = 2, 8  # label: 8 rows starting at row 2 of the straight body
 
-# Vana: (metin, renk) parçaları; ortası CX'e hizalı
+# Valve: (text, color) pieces; centered on CX
 VALVE = [
     [("           .-\"\"\"-.", "$4")],
     [("          ( (   ) )", "$4")],
@@ -40,17 +40,17 @@ VALVE = [
 ]
 
 FONT = {
-    # N, O ve S'den bir satır uzun (gerçek NOS logosundaki gibi)
+    # N is one row taller than O and S (as in the real NOS logo)
     "N": ["X..X", "XX.X", "XX.X", "X.XX", "X.XX", "X..X"],
     "O": ["XXX", "X.X", "X.X", "X.X", "XXX"],
     "S": ["XXX", "X..", "XXX", "..X", "XXX"],
 }
-PX = 2  # bir yazı pikseli = 2 sütun
+PX = 2  # one font pixel = 2 columns
 GAP = 1
 
 
 def inside(x, y):
-    """y: gövdenin tepesinden itibaren satır."""
+    """y: row counted from the top of the body."""
     if 0 <= y < DOME:
         t = (DOME - y) / DOME
         hw = max(2.0, R * math.sqrt(max(0.0, 1 - t * t)))
@@ -92,7 +92,7 @@ def render(body_in, body_edge, label_ch, letter_ch, arrow):
     width = int(CX + R + 2)
     grid = [[(" ", None) for _ in range(width)] for _ in range(rows)]
 
-    # Gövde
+    # Body
     for row in range(rows):
         for col in range(width):
             c = cov(col, row)
@@ -105,17 +105,17 @@ def render(body_in, body_edge, label_ch, letter_ch, arrow):
             else:
                 grid[row][col] = (edge_char(col, row, c), "$1")
 
-    # Etiket (turuncu dikdörtgen), kenar sütunları gövde rengiyle kalır
+    # Label (orange rectangle); the edge columns keep the body color
     top = int(DOME) + LABEL_TOP
     left, right = int(CX - R) + 1, int(CX + R) - 1
     for row in range(top, top + LABEL_ROWS):
         for col in range(left, right + 1):
             grid[row][col] = (label_ch, "$3")
 
-    # Harfler alttan hizalı: N 6 satır (etiketin 2. satırından), O ve S 5 satır.
+    # Letters are bottom-aligned: N is 6 rows (from the label's row 2), O and S are 5 rows.
     text_w = sum(len(FONT[ch][0]) * PX for ch in "NOS") + GAP * 2
     x0 = int(round(CX - text_w / 2))
-    bottom = top + 6  # harflerin son satırı
+    bottom = top + 6  # last row of the letters
     x = x0
     n_right = None
     for ch in "NOS":
@@ -128,17 +128,17 @@ def render(body_in, body_edge, label_ch, letter_ch, arrow):
                         grid[y0 + gy][x + gx * PX + k] = (letter_ch, "$2")
         x += len(glyph[0]) * PX + GAP
         if ch == "N":
-            n_right = x - GAP  # N'nin sağ kenarından sonraki sütun
-    x_end = x - GAP  # S'nin bitişi
+            n_right = x - GAP  # column right after N's right edge
+    x_end = x - GAP  # end of S
 
-    # Ok: N'nin sağ üst köşesinden çıkıp O ve S'nin üstünden sağa uzanır
+    # Arrow: starts at N's top right corner and runs right above O and S
     if arrow:
-        ay = bottom - len(FONT["N"]) + 1  # N'nin en üst satırı
+        ay = bottom - len(FONT["N"]) + 1  # top row of N
         for col in range(n_right, x_end):
             grid[ay][col] = ("=", "$2")
         grid[ay][x_end] = (">", "$2")
 
-    # Satırlara çevir
+    # Convert to lines
     lines = []
     for valve_line in VALVE:
         lines.append("".join(color + text for text, color in valve_line))
@@ -154,14 +154,14 @@ def render(body_in, body_edge, label_ch, letter_ch, arrow):
 
 
 VARIANTS = {
-    "a": ("Gövde o/s, etiket :, harfler #", ("o", "s", ":", "#", True)),
-    "b": ("Gövde +/o (Arch gibi), etiket %, harfler @", ("+", "o", "%", "@", True)),
-    "c": ("Gövde c, etiket ;, harfler M (Ubuntu gibi)", ("c", "c", ";", "M", True)),
+    "a": ("Body o/s, label :, letters #", ("o", "s", ":", "#", True)),
+    "b": ("Body +/o (like Arch), label %, letters @", ("+", "o", "%", "@", True)),
+    "c": ("Body c, label ;, letters M (like Ubuntu)", ("c", "c", ";", "M", True)),
 }
 
 PALETTES = [
-    ("mavi / turuncu", {"$1": "34", "$2": "97", "$3": "38;5;208", "$4": "90", "$5": "37"}),
-    ("açık mavi / turuncu", {"$1": "94", "$2": "97", "$3": "38;5;208", "$4": "90", "$5": "37"}),
+    ("blue / orange", {"$1": "34", "$2": "97", "$3": "38;5;208", "$4": "90", "$5": "37"}),
+    ("light blue / orange", {"$1": "94", "$2": "97", "$3": "38;5;208", "$4": "90", "$5": "37"}),
 ]
 
 
@@ -180,7 +180,7 @@ def main():
         lines = render(*VARIANTS[SELECTED][1])
         with open(INSTALL_PATH, "w", encoding="utf-8", newline="\n") as f:
             f.write("\n".join(lines) + "\n")
-        print(f"Yazıldı: {os.path.normpath(INSTALL_PATH)}")
+        print(f"Written: {os.path.normpath(INSTALL_PATH)}")
         return
     for key, (title, args) in VARIANTS.items():
         lines = render(*args)

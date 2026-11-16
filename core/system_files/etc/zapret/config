@@ -1,10 +1,10 @@
-# nos: zapret ayarı (DPI engelini aşma). zapret'in kendi config.default'u (73ee2aa), değişenler:
-#   NFQWS_ENABLE=1, MODE_FILTER=autohostlist (sadece engelli görünen ve
-#   ipset/zapret-hosts-user.txt'deki sitelere uygulanır), FWTYPE=nftables.
-# Yol /opt/zapret yerine /etc/zapret: imajda /opt salt okunur, zapret.service ZAPRET_RW ile
-# buraya yönlendiriliyor. Strateji (NFQWS_OPT) internet sağlayıcısına göre değişir; uygun
-# olanı bulmak için: sudo /opt/zapret/blockcheck.sh (bkz. README, "Engelli siteler").
-# Değiştirdikten sonra: sudo systemctl restart zapret
+# nos: zapret config (DPI block bypass). zapret's own config.default (73ee2aa), changes:
+#   NFQWS_ENABLE=1, MODE_FILTER=autohostlist (applied only to sites that look blocked and
+#   to the ones in ipset/zapret-hosts-user.txt), FWTYPE=nftables.
+# Path is /etc/zapret instead of /opt/zapret: /opt is read-only in the image, zapret.service
+# redirects here with ZAPRET_RW. The strategy (NFQWS_OPT) depends on the ISP; to find a
+# suitable one: sudo /opt/zapret/blockcheck.sh (see README, "Blocked sites").
+# After changing: sudo systemctl restart zapret
 
 # this file is included from init scripts
 # change values here

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Kaynak: bootcrew/mono shared/initramfs.sh (Apache-2.0, bkz. LICENSE).
-# Değişiklik: initramfs'in ve içindeki dosyaların tarihi çekirdeğin paket tarihine
-# sabitleniyor (SOURCE_DATE_EPOCH + touch). Yoksa dosya her build'de "şimdi" tarihli
-# çıkıyor, içerik aynı olsa da imajın katmanı değişip her güncellemede ~60 MB iniyordu.
+# Source: bootcrew/mono shared/initramfs.sh (Apache-2.0, see LICENSE).
+# Change: the date of the initramfs and the files inside it is pinned to the kernel package's
+# date (SOURCE_DATE_EPOCH + touch). Otherwise the file was dated "now" on every build, and even
+# with identical content the image layer changed and ~60 MB was downloaded on every update.
 
 set -xeuo pipefail
 

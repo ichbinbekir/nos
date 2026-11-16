@@ -1,26 +1,26 @@
 [Unit]
-Description=nos güncellemesini indir (bir sonraki açılışta uygulanır)
+Description=Download the nos update (applied on next boot)
 Documentation=man:bootc-upgrade(8)
-# Sadece bootc (composefs) ile açılmış sistemlerde çalış. bootc'nin kendi
-# bootc-fetch-apply-updates'i /run/ostree-booted'a bakıyor; composefs yapısında o dosya yok.
-# bootc açılış satırına sürüme göre "composefs.digest=..." ya da "composefs=..." yazıyor;
-# "|" ile ikisinden biri yeterli.
+# Run only on systems booted with bootc (composefs). bootc's own
+# bootc-fetch-apply-updates checks /run/ostree-booted; that file doesn't exist with composefs.
+# Depending on the version, bootc writes "composefs.digest=..." or "composefs=..." to the
+# kernel command line; with "|" either one is enough.
 ConditionKernelCommandLine=|composefs.digest
 ConditionKernelCommandLine=|composefs
 Wants=network-online.target
 After=network-online.target
-# Başarısız olursa (ör. internet anlık koptu) 15 dk sonra tekrar dener; 2 saatte en fazla
-# 4 deneme, sonra bir sonraki zamanlayıcı çalışmasını bekler.
+# On failure (e.g. a brief internet drop) it retries after 15 min; at most 4 attempts
+# in 2 hours, then it waits for the next timer run.
 StartLimitIntervalSec=2h
 StartLimitBurst=4
 
 [Service]
 Type=oneshot
-# --apply yok: bootc güncellemeyi indirip hazırlar, bilgisayarı yeniden başlatmaz.
-# Hazırlanan sürüm bir sonraki açılışta devreye girer.
+# No --apply: bootc downloads and stages the update, it does not reboot the computer.
+# The staged version takes effect on the next boot.
 ExecStart=/usr/bin/bootc upgrade --quiet
 Restart=on-failure
 RestartSec=15min
-# Arka planda, masaüstünü yavaşlatmadan çalış.
+# Run in the background without slowing down the desktop.
 Nice=19
 IOSchedulingClass=idle

@@ -1,7 +1,7 @@
-# AUR paketleri. Ayrı bir build aşamasında derlenir (scripts/aur.sh), imaja sadece paket
-# dosyaları geçer; bağımlılıkları depolardan gelir. Her satıra bir paket, # sonrası yorum.
+# AUR packages. Built in a separate build stage (scripts/aur.sh); only the package files reach
+# the image, dependencies come from the repos. One package per line, anything after # is a comment.
 
-helium-browser-bin # Tarayıcı
-espanso # Metin kısaltmaları (ör. ":date" → tarih). Kaynaktan, sadece Wayland sürümü (scripts/aur.sh). Hazır Debian paketi (espanso-wayland-bin) Arch'ın wxWidgets'ıyla uyumsuzdu, açılışta çöküyordu
-zapret-git # DPI engelini aşma (bol-van/zapret). Ayarı /etc/zapret, bkz. README "Engelli siteler"
-cloudflare-warp-bin # Cloudflare WARP (ücretsiz VPN, hesap gerekmiyor): warp-cli + menüde "Cloudflare One Client". Servisi (warp-svc) açık gelir, VPN bağlanana kadar bağlanmaz; bkz. README
+helium-browser-bin # Browser
+espanso # Text expansion (e.g. ":date" → date). From source, Wayland build only (scripts/aur.sh). The prebuilt Debian package (espanso-wayland-bin) was incompatible with Arch's wxWidgets and crashed on startup
+zapret-git # DPI circumvention (bol-van/zapret). Config in /etc/zapret, see README "Blocked sites"
+cloudflare-warp-bin # Cloudflare WARP (free VPN, no account needed): warp-cli + "Cloudflare One Client" in the menu. Its service (warp-svc) is enabled, but doesn't connect until you connect the VPN; see README

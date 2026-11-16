@@ -1,7 +1,7 @@
-# Açılışta karşılama yazısı olmasın.
+# No greeting message on startup.
 set fish_greeting
 
-# Kullanıcının kendi programları (ör. pip/uv/npm ile kurulanlar).
+# The user's own programs (e.g. installed with pip/uv/npm).
 fish_add_path ~/.local/bin
 
 if status is-interactive

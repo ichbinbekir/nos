@@ -4,7 +4,7 @@
 # Syntax: simple "KEY=VAL" pairs on separate lines
 #
 
-# nos: Varsayılan editör vim (git commit, sudoedit, crontab -e vb.). Bu dosya her
-# girişte (masaüstü, metin ekranı) okunur; kabuktan bağımsız, fish için de geçerli.
+# nos: Default editor is vim (git commit, sudoedit, crontab -e etc.). This file is read
+# on every login (desktop, text console); independent of the shell, also applies to fish.
 EDITOR=vim
 VISUAL=vim

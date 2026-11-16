@@ -1,5 +1,5 @@
-# nos imajının cosign imzaları imajın yanında ".sig" etiketi olarak duruyor; bunları oku.
-# İmza kuralı: /etc/containers/policy.json (ghcr.io/ichbinbekir/nos ve makine imajları için).
+# The nos image's cosign signatures sit next to the image as a ".sig" tag; read them.
+# Signature rule: /etc/containers/policy.json (for ghcr.io/ichbinbekir/nos and the machine images).
 docker:
   ghcr.io/ichbinbekir:
     use-sigstore-attachments: true

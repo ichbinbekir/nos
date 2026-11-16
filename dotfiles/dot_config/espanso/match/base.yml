@@ -1,18 +1,18 @@
-# Metin kısaltmaları: yazınca yerine geçer. Yenisi için bir "- trigger/replace" ekle;
-# espanso dosyayı kaydedince kendiliğinden yeniden okur.
+# Text abbreviations: replaced as you type. Add a "- trigger/replace" for a new one;
+# espanso reloads the file automatically when it is saved.
 matches:
   - trigger: ":date"
-    replace: "{{tarih}}"
+    replace: "{{date}}"
     vars:
-      - name: tarih
+      - name: date
         type: date
         params:
           format: "%d.%m.%Y"
 
   - trigger: ":time"
-    replace: "{{saat}}"
+    replace: "{{time}}"
     vars:
-      - name: saat
+      - name: time
         type: date
         params:
           format: "%H:%M"

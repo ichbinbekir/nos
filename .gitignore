@@ -1,8 +1,8 @@
-# cosign özel anahtarı asla commit'lenmemeli
+# The cosign private key must never be committed
 cosign.key
 output/
 *_chunkah_*/
-# Sanal makine disk imajları
+# Virtual machine disk images
 *.vdi
 *.qcow2
 *.raw

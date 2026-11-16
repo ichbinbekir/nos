@@ -1,59 +1,59 @@
 #!/usr/bin/env bash
-# Ortak imajın listelere sığmayan işleri. scripts/layer.sh paketleri kurup system_files'ı
-# kopyaladıktan ve servisleri açtıktan sonra çağırır. Sabit içerikli ayarlar burada değil,
-# system_files'ta düz dosya olarak durur; burada sadece üretilmesi ya da bir paket dosyasında
-# küçük bir değişiklik gereken ayarlar var.
+# Shared-image tasks that don't fit in the lists. scripts/layer.sh calls this after installing
+# packages, copying system_files and enabling services. Settings with fixed content are not
+# here but plain files in system_files; only settings that must be generated or need a small
+# change to a package's file live here.
 
 set -xeuo pipefail
 
-# distrobox 1.8.2.5 hatası: salt okunur klasörleri "ro:rslave" ile bağlıyor, podman bunu
-# reddediyor ("incorrect volume format"), kutu oluşturulamıyor. Doğrusu "ro,rslave"
-# (upstream'de düzeltildi, distrobox#2083; düzeltilmiş sürüm çıkmadı). Hata, crun'ın
-# podman info'daki bir satırında "runc" geçtiği için distrobox'ın runc yolunu seçmesiyle
-# ortaya çıkıyor. Düzeltilmiş sürüm gelince satır bulunmaz, adım kendiliğinden atlanır.
+# distrobox 1.8.2.5 bug: it mounts read-only folders with "ro:rslave", podman rejects that
+# ("incorrect volume format") and the box can't be created. The correct form is "ro,rslave"
+# (fixed upstream, distrobox#2083; no fixed release yet). It shows up because a line in crun's
+# podman info output contains "runc", so distrobox picks its runc code path. Once a fixed
+# release lands the line is not found and this step is skipped automatically.
 if grep -qF ':ro${rslave}"' /usr/bin/distrobox-create; then
   sed -i 's|:ro\${rslave}"|:ro,rslave"|' /usr/bin/distrobox-create
   grep -qF ':ro,rslave"' /usr/bin/distrobox-create
 fi
 
-# espanso Wayland'de klavyeyi /dev/input'tan okuyor; bunun için kendi kurulum betiği bu izni
-# veriyor. Paket betiği değişirse diye açıkça verilir ve günlüğe yazılır (izin imaj katmanlarında
-# korunuyor; kwin_wayland'in izni de aynı yoldan geliyor).
+# On Wayland espanso reads the keyboard from /dev/input; its own install script grants this
+# capability. It is set explicitly here (in case the package script changes) and logged (the
+# capability survives in image layers; kwin_wayland's capability arrives the same way).
 setcap cap_dac_override+p /usr/bin/espanso
 getcap /usr/bin/espanso
 
-# git dosya izinlerini taşımıyor; sudo bu izin olmadan dosyayı okumaz.
+# git doesn't preserve file permissions; sudo won't read the file without this mode.
 chmod 0440 /etc/sudoers.d/10-wheel
 
-# Yerel ayarlar. Hangisinin kullanılacağı kurulumda seçilir.
+# Locales. Which one is used is chosen during installation.
 sed -i -e 's/^#\(en_US.UTF-8 UTF-8\)/\1/' -e 's/^#\(tr_TR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
 locale-gen
 
-# İlk açılış: system_files/etc/machine-id "uninitialized" olduğu için sistem ilk açılışı
-# algılar; soruları nos-firstboot soruyor. Aynı işi yarım yapan systemd-firstboot kapatılır.
+# First boot: system_files/etc/machine-id is "uninitialized", so the system detects first boot;
+# nos-firstboot asks the questions. systemd-firstboot, which does half the same job, is masked.
 systemctl mask systemd-firstboot.service
 systemctl set-default graphical.target
 
-# Güvenlik duvarı (ufw): Gelen bağlantılar varsayılan olarak kapalı, giden açık.
-# Sadece KDE Connect'in portları açılır. ufw build sırasında çalışmadığı için kurallar
-# sadece dosyalara yazılır; ENABLED=yes ile açılışta ufw.service onları uygular.
+# Firewall (ufw): incoming connections denied by default, outgoing allowed.
+# Only KDE Connect's ports are opened. ufw doesn't run during the build, so the rules are only
+# written to files; with ENABLED=yes, ufw.service applies them at boot.
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 1714:1764/tcp comment 'KDE Connect'
 ufw allow 1714:1764/udp comment 'KDE Connect'
-# Sanal makinelerin ağı (libvirt'in "default" NAT ağı, virbr0): gelen kapalı olduğu için
-# sanal makineler bilgisayardaki dnsmasq'tan IP (DHCP) ve DNS alamıyordu; ufw yönlendirmeyi
-# de varsayılan olarak engellediği için internete çıkamıyorlardı. Sadece virbr0'a izin verilir.
+# VM network (libvirt's "default" NAT network, virbr0): with incoming denied, VMs couldn't get
+# an IP (DHCP) and DNS from the host's dnsmasq; ufw also blocks forwarding by default, so they
+# couldn't reach the internet. Only virbr0 is allowed.
 ufw allow in on virbr0 comment 'libvirt: DHCP/DNS'
-ufw route allow in on virbr0 comment 'libvirt: sanal makine -> internet'
-ufw route allow out on virbr0 comment 'libvirt: internet -> sanal makine'
+ufw route allow in on virbr0 comment 'libvirt: VM -> internet'
+ufw route allow out on virbr0 comment 'libvirt: internet -> VM'
 sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
 
-# Sistem adı (system_files/usr/lib/os-release): /etc/os-release ona bağlantı olmalı;
-# Arch Docker imajı onu düz dosyaya çeviriyor. Git ve Windows sembolik bağlantıları
-# güvenilir taşımadığı için bağlantı burada oluşturulur.
+# System name (system_files/usr/lib/os-release): /etc/os-release must be a symlink to it;
+# the Arch Docker image turns it into a regular file. Git and Windows don't carry symlinks
+# reliably, so the link is created here.
 ln -sf ../usr/lib/os-release /etc/os-release
 
-# libvirt'in hazır "default" NAT ağı (paketle gelen tanım) servis başlayınca kendiliğinden
-# açılsın; sanal makineler ek ayar yapmadan internete çıkar (virsh net-autostart default).
+# Autostart libvirt's ready-made "default" NAT network (definition shipped with the package)
+# when the service starts; VMs reach the internet without extra setup (virsh net-autostart default).
 ln -sf ../default.xml /etc/libvirt/qemu/networks/autostart/default.xml

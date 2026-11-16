@@ -1,7 +1,7 @@
-# Makine imajı (nos-<makine>): ortak nos imajının üzerine o makinenin sürücülerini ve
-# ayarlarını ekler (scripts/machine.sh, machines/<makine>/). Build bağlamı reponun kökü.
-# Ortak imaj yayınlanmıyor: CI (ve `just build-machine`) aynı yerde az önce build edilen
-# localhost/nos'u kullanır.
+# Machine image (nos-<machine>): adds that machine's drivers and settings on top of the shared
+# nos image (scripts/machine.sh, machines/<machine>/). The build context is the repo root.
+# The shared image is not published: CI (and `just build-machine`) use localhost/nos, built
+# just before in the same place.
 ARG BASE_IMAGE=localhost/nos:latest
 
 FROM scratch AS ctx

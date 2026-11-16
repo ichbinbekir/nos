@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# /var imaja girmiyor: bootc-rootfs.sh (makine imajında machine.sh) boşaltıyor, bootc da
-# kurulu sistemlerde /var'a dokunmuyor. Paketlerin /var altına koyduğu klasörler (ör.
-# /var/lib/libvirt, /var/log/swtpm) bu yüzden kurulu sistemde yoktu; libvirt bu yüzden
-# açılmıyordu. Fedora'da rpm-ostree bunu kendiliğinden yapıyor, burada elle: her klasör
-# sahibi ve izniyle tmpfiles.d satırına çevrilir, açılışta systemd-tmpfiles eksikleri
-# oluşturur. Zaten klasörü oluşturan bir tmpfiles.d satırı (d, D, v, q, Q, C, L) olan
-# yollar ve pacman'ın kendi klasörleri atlanır. Sadece izin düzelten satırlar (z, Z; ör.
-# swtpm'in /var/lib/swtpm-localca'sı) klasörü oluşturmadığı için onlar sayılmaz.
+# /var is not part of the image: bootc-rootfs.sh (machine.sh in machine images) empties it, and
+# bootc doesn't touch /var on installed systems. So folders packages put under /var (e.g.
+# /var/lib/libvirt, /var/log/swtpm) were missing on installed systems; that's why libvirt
+# didn't start. On Fedora rpm-ostree does this automatically; here it's done by hand: each
+# folder becomes a tmpfiles.d line with its owner and mode, and systemd-tmpfiles creates the
+# missing ones at boot. Paths that already have a tmpfiles.d line creating the folder (d, D, v,
+# q, Q, C, L) and pacman's own folders are skipped. Lines that only fix permissions (z, Z; e.g.
+# swtpm's /var/lib/swtpm-localca) don't create the folder, so they don't count.
 #
-# Kullanım: var-tmpfiles.sh <yazılacak tmpfiles.d dosyası>
+# Usage: var-tmpfiles.sh <tmpfiles.d file to write>
 
 set -euo pipefail
 

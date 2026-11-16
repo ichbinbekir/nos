@@ -1,6 +1,6 @@
-# nos: btrfs'te zstd sıkıştırma (seviye 1: hızlı, CPU'ya yük bindirmiyor; Fedora'nın varsayılanı).
-# bootc bunu kurulumda ve güncellemede açılış satırına ekliyor; kurulumun yazdığı
-# rootflags=subvol=/ yerinde kalıyor, systemd ikisini birleştiriyor (subvol=/,compress=zstd:1).
-# Sadece yeni yazılan dosyalar sıkıştırılır.
-# Kök dosya sistemi btrfs olmak zorunda: başka bir dosya sistemi bu seçeneği tanımaz ve açılmaz.
+# nos: zstd compression on btrfs (level 1: fast, no real CPU load; Fedora's default).
+# bootc adds this to the kernel command line on install and on update; the
+# rootflags=subvol=/ written by the installer stays, systemd merges both (subvol=/,compress=zstd:1).
+# Only newly written files are compressed.
+# The root file system must be btrfs: any other file system rejects this option and won't boot.
 kargs = ["rootflags=compress=zstd:1"]

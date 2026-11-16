@@ -1,2 +1,2 @@
-## wheel grubundaki kullanıcılar sudo kullanabilir.
+## Users in the wheel group can use sudo.
 %wheel ALL=(ALL:ALL) ALL

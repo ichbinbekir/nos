@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
-# Bir katmanı imaja uygular: ortak imaj (core/), makineler (machines/<makine>/), ileride
-# masaüstleri. Katman klasöründe (hepsi isteğe bağlı):
-#   packages.txt  kurulacak paketler (her satıra bir paket, # sonrası yorum)
-#   aur.txt       AUR paketleri (aynı biçim); aur-builder aşamasında derlenir (aur.sh) ve
-#                 /aur'dan kurulur. Şimdilik sadece ortak imajda (core/Containerfile /aur'u bağlıyor).
-#   system_files/ köke olduğu gibi kopyalanan dosyalar
-#   services.txt  etkinleştirilecek servisler (aynı biçim)
-#   setup.sh      listelere sığmayan işler; en son çalışır
+# Applies a layer to the image: the shared image (core/), machines (machines/<machine>/), later
+# desktops. In the layer folder (all optional):
+#   packages.txt  packages to install (one per line, anything after # is a comment)
+#   aur.txt       AUR packages (same format); built in the aur-builder stage (aur.sh) and
+#                 installed from /aur. For now only in the shared image (core/Containerfile mounts /aur).
+#   system_files/ files copied to / as-is
+#   services.txt  services to enable (same format)
+#   setup.sh      tasks that don't fit in the lists; runs last
 #
-# Kullanım: layer.sh <katman klasörü> <ad>
-# <ad>, /var klasörlerinin yazıldığı tmpfiles.d dosyasının adında: nos-var-<ad>.conf.
+# Usage: layer.sh <layer folder> <name>
+# <name> goes into the name of the tmpfiles.d file listing /var folders: nos-var-<name>.conf.
 
 set -xeuo pipefail
 
-dir="${1:?katman klasörü verilmedi}"
-name="${2:?katman adı verilmedi}"
-[[ -d $dir ]] || { echo "Katman klasörü yok: $dir" >&2; exit 1; }
+dir="${1:?no layer folder given}"
+name="${2:?no layer name given}"
+[[ -d $dir ]] || { echo "Layer folder not found: $dir" >&2; exit 1; }
 
-# Satırlardan yorumları ve boşlukları ayıklar.
+# Strips comments and whitespace from the lines.
 list() { [[ -f $1 ]] && sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$1" || true; }
 
-# Paket veritabanı burada güncellenmiyor (-y yok). Ortak imajda core/Containerfile bunu hemen
-# önce yapıyor. Makine imajlarında bilerek: ortak imajın kurulduğu veritabanıyla aynı
-# sürümler gelsin. Özellikle nvidia-open çekirdeğin tam sürümü için derlendiği için yeni bir
-# veritabanı çekirdekle uyuşmayan bir sürüm getirebilirdi. Makine build'i CI'da ortak
-# imajın hemen ardından çalışıyor.
+# The package database is not refreshed here (no -y). For the shared image, core/Containerfile
+# does it right before. For machine images it's deliberate: versions should match the database
+# the shared image was installed from. In particular nvidia-open is built for the exact kernel
+# version, so a newer database could bring a version that doesn't match the kernel. In CI the
+# machine build runs right after the shared image.
 mapfile -t packages < <(list "$dir/packages.txt")
 if ((${#packages[@]})); then
   pacman -S --noconfirm --needed "${packages[@]}"
 fi
 
 if [[ -f $dir/aur.txt ]]; then
-  [[ -d /aur ]] || { echo "AUR paketleri derlenmemiş (/aur yok)" >&2; exit 1; }
+  [[ -d /aur ]] || { echo "AUR packages were not built (/aur missing)" >&2; exit 1; }
   find /aur -name '*.pkg.tar.zst' ! -name '*-debug-*' -print0 | xargs -0 pacman -U --noconfirm
 fi
 
-# Paketlerden sonra: bir paketin kendi dosyasının yerine konan ayarlar (ör. /etc/environment)
-# paket kurulumunda ezilmesin.
+# After the packages, so settings that replace a package's own file (e.g. /etc/environment)
+# aren't overwritten by package installation.
 if [[ -d $dir/system_files ]]; then
   cp -avf "$dir/system_files/." /
 fi
@@ -50,14 +50,14 @@ if [[ -f $dir/setup.sh ]]; then
   bash "$dir/setup.sh"
 fi
 
-# Arch Docker imajının kendi ayarları korunurken pacman yeni sürümleri .pacnew olarak
-# bırakıyor; gerekmiyorlar.
+# pacman keeps the Arch Docker image's own configs and leaves new versions as .pacnew;
+# they're not needed.
 find /etc -name '*.pacnew' -delete
 
-# Donanım veritabanı (hwdb.bin) paket kurulumunda yeniden üretiliyor ve tarihi build anı
-# oluyor; içerik aynı olsa da imajın katmanı her gün değişip yeniden iniyordu. Tarihi,
-# kaynak dosyalarının (hwdb.d) en yenisine sabitlenir.
+# The hardware database (hwdb.bin) is regenerated during package installation with the build
+# time as its date; even with identical content the image layer changed daily and was
+# downloaded again. Its date is pinned to the newest of its source files (hwdb.d).
 touch -d "@$(stat -c %Y /usr/lib/udev/hwdb.d/* | sort -n | tail -n1)" /usr/lib/udev/hwdb.bin
 
-# Paketlerin /var altına koyduğu klasörler açılışta oluşturulsun (bkz. var-tmpfiles.sh).
+# Have the folders packages put under /var created at boot (see var-tmpfiles.sh).
 bash "$(dirname "$0")/var-tmpfiles.sh" "/usr/lib/tmpfiles.d/nos-var-$name.conf"

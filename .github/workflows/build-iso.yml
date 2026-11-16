@@ -1,10 +1,10 @@
 name: Build installer ISO
 
-# Kurulum ISO'sunu (iso/, archiso) build edip çalışmanın Artifacts bölümüne koyar (7 gün).
-# Kurulum sanal makinede ve gerçek bilgisayarda denenince Releases'e konmaya başlanacak.
-# Elle tetiklenir:
-# ISO'nun içinde imaj yok, kurulum sırasında en son imaj internetten indiriliyor; bu yüzden
-# ISO sadece kurulum programı ya da canlı ortam değişince yeniden üretilmeli.
+# Builds the installer ISO (iso/, archiso) and puts it in the run's Artifacts (7 days).
+# Once installation has been tested in a VM and on real hardware, it will go to Releases.
+# Triggered manually:
+# The ISO contains no image; the latest image is downloaded during installation, so the ISO
+# only needs rebuilding when the installer or the live environment changes.
 on:
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # mkarchiso loop aygıtı ve bağlama (mount) kullandığı için root ve --privileged gerekiyor.
+      # mkarchiso uses loop devices and mounts, so it needs root and --privileged.
       - name: Build ISO
         run: |
           set -euxo pipefail
@@ -28,7 +28,7 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" out
           cd out && sha256sum ./*.iso > SHA256SUMS && ls -lh
 
-      # ISO zaten sıkıştırılmış; zip'te tekrar sıkıştırılmaz.
+      # The ISO is already compressed; don't compress it again in the zip.
       - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:

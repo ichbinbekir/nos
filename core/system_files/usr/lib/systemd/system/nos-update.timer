@@ -1,8 +1,8 @@
 [Unit]
-Description=nos güncellemelerini düzenli olarak kontrol et
+Description=Check for nos updates regularly
 
 [Timer]
-# Açılıştan 10 dakika sonra, sonra her 6 saatte bir. İmaj her gün 04:00 UTC'de build ediliyor.
+# 10 minutes after boot, then every 6 hours. The image is built daily at 04:00 UTC.
 OnBootSec=10min
 OnUnitInactiveSec=6h
 RandomizedDelaySec=10min

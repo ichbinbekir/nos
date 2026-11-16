@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# nos ilk kurulum ekranı. İlk açılışta, giriş ekranından önce tty1'de çalışır (nos-firstboot.service).
+# nos first-boot setup screen. Runs on tty1 on first boot, before the login screen
+# (nos-firstboot.service).
 #
-# Akış: Önce bütün sorular sorulur, sonra özet gösterilip onay alınır; sistemde hiçbir
-# şey bu onaydan önce değişmez. Uygulama adımları tekrar çalıştırılabilir şekilde
-# yazıldı: bir adım hata verirse kullanıcıya tekrar deneme ya da baştan başlama
-# seçeneği sunulur. Bitti işareti (/var/lib/nos/firstboot-done) ancak her adım
-# başarılı olunca yazılır; yarıda kesilirse (ör. elektrik giderse) bir sonraki
-# açılışta ekran yeniden gelir.
+# Flow: all questions are asked first, then a summary is shown and confirmation is asked;
+# nothing on the system changes before that confirmation. The apply steps are written to
+# be re-runnable: if a step fails, the user can retry or start over. The done marker
+# (/var/lib/nos/firstboot-done) is only written once every step has succeeded; if setup is
+# interrupted (e.g. a power cut), the screen comes back on the next boot.
 #
-# root hesabı kilitli kalır; oluşturulan kullanıcı /usr/share/nos/user-groups'taki
-# gruplara eklenir (wheel: sudo, libvirt: sanal makineler vb.).
+# The root account stays locked; the created user is added to the groups in
+# /usr/share/nos/user-groups (wheel: sudo, libvirt: virtual machines, etc.).
 
 set -uo pipefail
 
@@ -17,114 +17,114 @@ STATE_DIR=/var/lib/nos
 DONE="$STATE_DIR/firstboot-done"
 STARTED="$STATE_DIR/firstboot-started"
 
-ACCENT=4 # Mavi (metin ekranında 16 renk var)
+ACCENT=4 # Blue (the text console has 16 colors)
 
-# Ctrl+C ile ekranın kapanıp sistemi kullanıcısız bırakmasını engelle.
+# Don't let Ctrl+C close the screen and leave the system without a user.
 trap '' INT TERM QUIT TSTP
 
-# switch ile gelen sistemler: Kurulum hiç başlamadıysa ve zaten normal bir kullanıcı
-# varsa hiçbir şey sorma.
+# Systems that came via switch: if setup never started and a regular user already
+# exists, don't ask anything.
 if [[ ! -e "$STARTED" ]] && getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 { f = 1 } END { exit !f }'; then
   mkdir -p "$STATE_DIR"
   touch "$DONE"
   exit 0
 fi
 
-# Metin ekranının varsayılan yazı tipinde ğ, ş, ı, İ yok.
+# The console's default font lacks Turkish letters (ğ, ş, ı, İ).
 setfont eurlatgr 2>/dev/null || true
 
-# --- Yardımcılar ---------------------------------------------------------------
+# --- Helpers -------------------------------------------------------------------
 
 header() {
   clear
   gum style --border normal --border-foreground "$ACCENT" --padding "0 2" --margin "1 2" \
-    --bold "nos - ilk kurulum" "$1"
+    --bold "nos - first-time setup" "$1"
 }
 
 error() {
   gum style --foreground 1 --margin "0 2" "$@"
 }
 
-# gum Esc/Ctrl+C ile çıkınca boş döner; boş cevabı kabul etmeyip soruyu tekrarlarız.
+# gum returns empty on Esc/Ctrl+C; we don't accept an empty answer and repeat the question.
 
 ask_timezone() {
-  header "Saat dilimi (yazarak ara, ok tuşlarıyla seç, Enter)"
+  header "Time zone (type to search, arrow keys to select, Enter)"
   local tz
   while :; do
     tz=$({ echo "Europe/Istanbul"; timedatectl list-timezones | grep -vx "Europe/Istanbul"; } |
-      gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+      gum filter --height 15 --placeholder "Search..." --padding "0 2") || true
     [[ -n "$tz" ]] && break
   done
   TIMEZONE="$tz"
 }
 
 ask_language() {
-  header "Sistem dili"
+  header "System language"
   local choice
   while :; do
-    choice=$(gum choose --padding "0 2" --selected "Türkçe" "Türkçe" "English") || true
+    choice=$(gum choose --padding "0 2" --selected "Turkish" "Turkish" "English") || true
     [[ -n "$choice" ]] && break
   done
   case "$choice" in
-    Türkçe) LOCALE=tr_TR.UTF-8 DEFAULT_KEYMAP=trq ;;
+    Turkish) LOCALE=tr_TR.UTF-8 DEFAULT_KEYMAP=trq ;;
     English) LOCALE=en_US.UTF-8 DEFAULT_KEYMAP=us ;;
   esac
 }
 
 ask_keymap() {
-  header "Klavye düzeni"
-  local -A keymaps=(["Türkçe Q"]=trq ["Türkçe F"]=trf ["İngilizce (ABD)"]=us)
+  header "Keyboard layout"
+  local -A keymaps=(["Turkish Q"]=trq ["Turkish F"]=trf ["English (US)"]=us)
   local default_label choice
   for default_label in "${!keymaps[@]}"; do
     [[ "${keymaps[$default_label]}" == "$DEFAULT_KEYMAP" ]] && break
   done
   while :; do
     choice=$(gum choose --padding "0 2" --selected "$default_label" \
-      "Türkçe Q" "Türkçe F" "İngilizce (ABD)" "Diğer...") || true
+      "Turkish Q" "Turkish F" "English (US)" "Other...") || true
     [[ -n "$choice" ]] && break
   done
-  if [[ "$choice" == "Diğer..." ]]; then
-    header "Klavye düzeni (yazarak ara)"
+  if [[ "$choice" == "Other..." ]]; then
+    header "Keyboard layout (type to search)"
     while :; do
-      KEYMAP=$(localectl list-keymaps | gum filter --height 15 --placeholder "Ara..." --padding "0 2") || true
+      KEYMAP=$(localectl list-keymaps | gum filter --height 15 --placeholder "Search..." --padding "0 2") || true
       [[ -n "$KEYMAP" ]] && break
     done
   else
     KEYMAP="${keymaps[$choice]}"
   fi
-  # Seçilen düzeni hemen uygula ki sonraki sorularda doğru harfler yazılsın.
+  # Apply the chosen layout right away so the following questions get the right characters.
   loadkeys "$KEYMAP" 2>/dev/null || true
 }
 
 ask_hostname() {
-  header "Bilgisayar adı (ağda bu adla görünür)"
+  header "Hostname (shown with this name on the network)"
   local name value="${HOSTNAME_VALUE:-nos}"
   while :; do
     name=$(gum input --padding "0 2" --value "$value" --char-limit 63 \
-      --placeholder "ör. bekir-pc") || true
+      --placeholder "e.g. bekir-pc") || true
     name="${name,,}"
     if [[ "$name" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
       break
     fi
-    error "Geçersiz ad: küçük harf, rakam ve - kullanılabilir; - ile başlayıp bitemez."
+    error "Invalid name: use lowercase letters, digits and -; it can't start or end with -."
     value="$name"
   done
   HOSTNAME_VALUE="$name"
 }
 
 ask_username() {
-  header "Kullanıcı adı (giriş ve ev dizini için; küçük harf)"
+  header "Username (for login and the home directory; lowercase)"
   local name uid value="${USERNAME:-}"
   while :; do
     name=$(gum input --padding "0 2" --value "$value" --char-limit 32 \
-      --placeholder "ör. bekir") || true
+      --placeholder "e.g. bekir") || true
     if [[ ! "$name" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
-      error "Geçersiz ad: küçük harf, rakam, - ve _ kullanılabilir; harfle başlamalı."
+      error "Invalid name: use lowercase letters, digits, - and _; must start with a letter."
     elif uid=$(getent passwd "$name" | cut -d: -f3) && [[ -n "$uid" ]] &&
       { ((uid < 1000 || uid >= 60000)) || [[ ! -e "$STARTED" ]]; }; then
-      # Sistem hesapları hiç kabul edilmez. Normal bir kullanıcı ancak yarım kalmış
-      # bir kurulumun devamıysa kabul edilir (o zaman hesap güncellenir).
-      error "Bu ad sistemde zaten var, başka bir ad seç."
+      # System accounts are never accepted. A regular user is accepted only when continuing
+      # an unfinished setup (the account is updated then).
+      error "This name already exists on the system, choose another one."
     else
       break
     fi
@@ -134,7 +134,7 @@ ask_username() {
 }
 
 ask_fullname() {
-  header "Görünen ad (giriş ekranında görünür; isteğe bağlı)"
+  header "Display name (shown on the login screen; optional)"
   local name
   name=$(gum input --padding "0 2" --value "${FULLNAME:-${USERNAME^}}" --char-limit 64) || true
   FULLNAME="${name//:/}"
@@ -143,16 +143,16 @@ ask_fullname() {
 ask_password() {
   local p1 p2
   while :; do
-    header "Şifre ($USERNAME)"
-    p1=$(gum input --padding "0 2" --password --placeholder "Şifre") || true
+    header "Password ($USERNAME)"
+    p1=$(gum input --padding "0 2" --password --placeholder "Password") || true
     if [[ -z "$p1" ]]; then
-      error "Şifre boş olamaz."
+      error "The password can't be empty."
       sleep 1.5
       continue
     fi
-    p2=$(gum input --padding "0 2" --password --placeholder "Şifre (tekrar)") || true
+    p2=$(gum input --padding "0 2" --password --placeholder "Password (again)") || true
     if [[ "$p1" != "$p2" ]]; then
-      error "Şifreler aynı değil, tekrar dene."
+      error "The passwords don't match, try again."
       sleep 1.5
       continue
     fi
@@ -162,21 +162,21 @@ ask_password() {
 }
 
 summary() {
-  header "Özet"
+  header "Summary"
   gum style --margin "0 2" \
-    "Saat dilimi    : $TIMEZONE" \
-    "Dil            : $LOCALE" \
-    "Klavye         : $KEYMAP" \
-    "Bilgisayar adı : $HOSTNAME_VALUE" \
-    "Kullanıcı adı  : $USERNAME" \
-    "Görünen ad     : ${FULLNAME:-(yok)}" \
-    "Kabuk          : fish" \
-    "Snapshot       : ev dizini, günlük (son 3 gün + son 2 hafta)"
+    "Time zone    : $TIMEZONE" \
+    "Language     : $LOCALE" \
+    "Keyboard     : $KEYMAP" \
+    "Hostname     : $HOSTNAME_VALUE" \
+    "Username     : $USERNAME" \
+    "Display name : ${FULLNAME:-(none)}" \
+    "Shell        : fish" \
+    "Snapshots    : home directory, daily (last 3 days + last 2 weeks)"
   echo
-  gum confirm --padding "0 2" --affirmative "Kur" --negative "Baştan başla" "Bilgiler doğru mu?"
+  gum confirm --padding "0 2" --affirmative "Install" --negative "Start over" "Is everything correct?"
 }
 
-# --- Uygulama adımları (hepsi tekrar çalıştırılabilir) -------------------------
+# --- Apply steps (all re-runnable) ---------------------------------------------
 
 apply_timezone() { timedatectl set-timezone "$TIMEZONE"; }
 apply_locale() { localectl set-locale "LANG=$LOCALE"; }
@@ -186,13 +186,13 @@ apply_keymap() {
 }
 apply_hostname() { hostnamectl set-hostname "$HOSTNAME_VALUE"; }
 
-# Açılış menüsü 5 saniye görünsün (Windows'u ya da önceki nos sürümünü seçebilmek için).
-# bootc "timeout 5" yazmak istiyor ama sadece loader.conf yoksa; kurulumda systemd-boot
-# önce satırları kapalı (#) bir loader.conf oluşturduğu için menü hiç görünmüyor.
-# bootc bu dosyaya sonra dokunmuyor.
-# EFI bölümü bootc'nin seçtiği gibi bulunur: sistem diskindeki ilk EFI bölümü. /boot'un
-# bağlı olduğu varsayılmaz: bölüm bir yere bağlıysa orası kullanılır (salt okunursa geçici
-# olarak yazılabilir yapılır), değilse /run altında geçici olarak bağlanır.
+# Show the boot menu for 5 seconds (to be able to pick Windows or a previous nos version).
+# bootc wants to write "timeout 5" but only if loader.conf doesn't exist; during install
+# systemd-boot first creates a loader.conf with the lines commented out (#), so the menu
+# never shows up. bootc doesn't touch this file afterwards.
+# The EFI partition is found the way bootc picks it: the first EFI partition on the system
+# disk. /boot is not assumed to be mounted: if the partition is mounted somewhere, that is
+# used (temporarily made writable if read-only), otherwise it's mounted under /run temporarily.
 ESP_TYPE=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
 apply_bootmenu() {
   local root_dev disk esp mnt="" tmp="" ro=0 rc=0 conf
@@ -228,12 +228,12 @@ apply_bootmenu() {
   return $rc
 }
 
-# btrfs'te alt birimin (subvolume) kök dizininin inode numarası her zaman 256.
+# On btrfs the root directory of a subvolume always has inode number 256.
 home_is_subvolume() { [[ "$(stat -c %i /var/home 2>/dev/null)" == 256 ]]; }
 
-# Snapshot sadece btrfs alt birimlerinden alınabiliyor; bootc ise /var/home'u düz bir
-# dizin olarak kuruyor. Kullanıcı oluşturulmadan önce, dizin henüz boşken alt birime
-# çevrilir. btrfs değilse ya da dizin doluysa (beklenmez) dokunulmaz.
+# Snapshots can only be taken of btrfs subvolumes, but bootc creates /var/home as a plain
+# directory. Before the user is created, while the directory is still empty, it's turned
+# into a subvolume. Left alone if not btrfs or if the directory isn't empty (not expected).
 apply_home_subvolume() {
   [[ "$(findmnt -no FSTYPE -T /var)" == btrfs ]] || return 0
   home_is_subvolume && return 0
@@ -244,8 +244,8 @@ apply_home_subvolume() {
   btrfs subvolume create /var/home && chmod 0755 /var/home
 }
 
-# Ev dizininin otomatik snapshot'ları: son 3 gün ve son 2 hafta. Kullanıcı snapper'ı ve
-# /home/.snapshots'u sudo olmadan kullanabilir.
+# Automatic snapshots of the home directory: last 3 days and last 2 weeks. The user can use
+# snapper and /home/.snapshots without sudo.
 apply_snapper() {
   home_is_subvolume || return 0
   [[ -e /etc/snapper/configs/home ]] || snapper -c home create-config /var/home
@@ -256,7 +256,7 @@ apply_snapper() {
     ALLOW_USERS="$USERNAME" SYNC_ACL=yes
 }
 
-# Gruplar /usr/share/nos/user-groups'tan (kurulum programıyla aynı liste); olmayan atlanır.
+# Groups from /usr/share/nos/user-groups (same list as the installer); missing ones are skipped.
 user_groups() {
   local g groups=
   for g in $(cut -d'#' -f1 /usr/share/nos/user-groups 2>/dev/null || echo wheel); do
@@ -274,18 +274,18 @@ apply_user() {
 }
 apply_password() { printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd; }
 
-# Bir adımı çalıştırır; hata verirse ne olacağını kullanıcıya sorar.
-# Dönüş: 0 = başarılı, 1 = kullanıcı baştan başlamak istedi.
+# Runs a step; if it fails, asks the user what to do.
+# Returns: 0 = success, 1 = the user wants to start over.
 run_step() {
   local title="$1" fn="$2" out
   while :; do
     if out=$("$fn" 2>&1); then
-      gum style --margin "0 2" "[tamam] $title"
+      gum style --margin "0 2" "[ok] $title"
       return 0
     fi
-    error "[HATA] $title başarısız:" "$out"
+    error "[ERROR] $title failed:" "$out"
     echo
-    if gum confirm --padding "0 2" --affirmative "Tekrar dene" --negative "Baştan başla" "Ne yapılsın?"; then
+    if gum confirm --padding "0 2" --affirmative "Retry" --negative "Start over" "What now?"; then
       continue
     fi
     return 1
@@ -293,19 +293,19 @@ run_step() {
 }
 
 apply_all() {
-  header "Kuruluyor..."
-  run_step "Saat dilimi" apply_timezone &&
-    run_step "Dil" apply_locale &&
-    run_step "Klavye" apply_keymap &&
-    run_step "Bilgisayar adı" apply_hostname &&
-    run_step "Açılış menüsü (5 sn)" apply_bootmenu &&
-    run_step "Ev dizini (snapshot için)" apply_home_subvolume &&
-    run_step "Kullanıcı" apply_user &&
-    run_step "Şifre" apply_password &&
-    run_step "Otomatik snapshot" apply_snapper
+  header "Installing..."
+  run_step "Time zone" apply_timezone &&
+    run_step "Language" apply_locale &&
+    run_step "Keyboard" apply_keymap &&
+    run_step "Hostname" apply_hostname &&
+    run_step "Boot menu (5 s)" apply_bootmenu &&
+    run_step "Home directory (for snapshots)" apply_home_subvolume &&
+    run_step "User" apply_user &&
+    run_step "Password" apply_password &&
+    run_step "Automatic snapshots" apply_snapper
 }
 
-# --- Ana akış -------------------------------------------------------------------
+# --- Main flow -----------------------------------------------------------------
 
 while :; do
   ask_timezone
@@ -328,5 +328,5 @@ touch "$DONE"
 rm -f "$STARTED"
 unset PASSWORD
 echo
-gum style --margin "0 2" --foreground 2 --bold "Hazır! Giriş ekranı açılıyor..."
+gum style --margin "0 2" --foreground 2 --bold "Done! Opening the login screen..."
 sleep 2

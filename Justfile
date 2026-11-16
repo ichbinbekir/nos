@@ -1,26 +1,26 @@
 image_name := env("IMAGE_NAME", "nos")
 tag := env("IMAGE_TAG", "latest")
 bootc_image := env("BOOTC_IMAGE", "ghcr.io/ichbinbekir/nos-bootc:latest")
-# Ortak imaj yayınlanmıyor; makine imajları yerelde build edilen nos'un üzerine kurulur.
+# The shared image is not published; machine images are built on top of the locally built nos.
 base_image := env("BASE_IMAGE", "localhost/nos:latest")
 
 [private]
 default:
     @just --list
 
-# İmajı build eder (bootc, bootc_image imajından kopyalanır)
+# Build the image (bootc is copied from the bootc_image image)
 build $image_name=image_name $tag=tag $bootc_image=bootc_image:
     podman build --pull=newer --file core/Containerfile --build-arg BOOTC_IMAGE="${bootc_image}" --tag "${image_name}:${tag}" .
 
-# Makine imajını (nos-<makine>) ortak imajın üzerine build eder (machines/<makine>/)
+# Build a machine image (nos-<machine>) on top of the shared image (machines/<machine>/)
 build-machine machine $base_image=base_image $tag=tag:
     podman build --file machines/Containerfile --build-arg BASE_IMAGE="${base_image}" --build-arg MACHINE="{{ machine }}" --tag "nos-{{ machine }}:${tag}" .
 
-# bootc'yi derleyip sadece onu içeren küçük imajı build eder. version boşsa en son sürüm.
+# Compile bootc and build the small image containing only it. Empty version = latest release.
 build-bootc $version="" $image_name="nos-bootc":
     podman build --pull=newer --file scripts/bootc/Containerfile --build-arg BOOTC_VERSION="${version}" --tag "${image_name}:latest" scripts/bootc
 
-# İmajı, güncellemelerde sadece değişen kısımlar indirilecek şekilde katmanlara böler (ublue-os/image-template, Apache-2.0)
+# Split the image into layers so updates only download the parts that changed (ublue-os/image-template, Apache-2.0)
 rechunk $image_name=image_name $tag=tag:
     #!/usr/bin/env bash
     set -xeuo pipefail

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Kaynak: bootcrew/mono shared/build.sh (Apache-2.0, bkz. LICENSE).
-# Değişiklikler:
-# - main dalı yerine yayınlanmış bir sürüm (vX.Y.Z etiketi) derleniyor; main her an
-#   bozulabiliyor. BOOTC_VERSION verilirse o sürüm, verilmezse en sonuncusu.
-# - SELinux desteği kapalı derleniyor. bootc 1.17'den beri varsayılan olarak
-#   libselinux istiyor; Arch'ın resmi depolarında yok ve Arch SELinux kullanmıyor.
-#   Seçenekler bootc Makefile'ındaki örnekten alındı.
-# - Sonda derleme klasörü ve cargo önbelleği siliniyor (aşağıda).
+# Source: bootcrew/mono shared/build.sh (Apache-2.0, see LICENSE).
+# Changes:
+# - A released version (vX.Y.Z tag) is built instead of the main branch; main can break at
+#   any time. If BOOTC_VERSION is given, that version; otherwise the latest.
+# - Built without SELinux support. Since 1.17 bootc requires libselinux by default; it isn't
+#   in Arch's official repos and Arch doesn't use SELinux.
+#   The options are taken from the example in bootc's Makefile.
+# - The build folder and cargo cache are deleted at the end (below).
 
 set -xeuo pipefail
 
@@ -17,8 +17,8 @@ git checkout "$version"
 make bin install-all DESTDIR=/output \
   CARGO_OPTIONS='--no-default-features --features "install-to-disk pre-6.15"'
 
-# Derleme artıkları (target/, birkaç GB) bu adımın imaj katmanına girmesin: podman katmanı
-# kaydederken onları bir kez daha yazıyor ve build makinesinin diski doluyordu
-# ("no space left on device", 2 Kasım). Sonraki aşama sadece /output'u alıyor.
+# Keep build leftovers (target/, a few GB) out of this step's image layer: podman wrote them
+# once more while committing the layer and the build machine's disk filled up
+# ("no space left on device", Nov 2). The next stage only takes /output.
 cd /
 rm -rf /home/build /root/.cargo

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Bir katmanın aur.txt'sindeki AUR paketlerini derleyip /output'a koyar. Bu betik ayrı bir
-# build aşamasında çalışır; derleme araçları ve "build" kullanıcısı son imaja girmez.
+# Builds the AUR packages listed in a layer's aur.txt and puts them in /output. This script runs
+# in a separate build stage; the build tools and the "build" user don't reach the final image.
 #
-# Kullanım: aur.sh <aur.txt>
+# Usage: aur.sh <aur.txt>
 
 set -xeuo pipefail
 
-mapfile -t AUR_PACKAGES < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "${1:?AUR listesi verilmedi}")
+mapfile -t AUR_PACKAGES < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "${1:?no AUR list given}")
 
 pacman -Syu --noconfirm --needed base-devel git
 
-# makepkg root olarak çalışmaz. -s ile bağımlılıkları kurabilmesi için
-# build kullanıcısına şifresiz sudo verilir (sadece bu aşamada).
+# makepkg doesn't run as root. So it can install dependencies with -s, the build user gets
+# passwordless sudo (only in this stage).
 useradd -m build
 echo 'build ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/build
 install -d -o build /output
@@ -20,26 +20,26 @@ for pkg in "${AUR_PACKAGES[@]}"; do
   runuser -u build -- git clone --depth 1 "https://aur.archlinux.org/${pkg}.git" "/home/build/${pkg}"
   cd "/home/build/${pkg}"
 
-  # Kaynak dosyaların imzasını doğrulamak için PKGBUILD'deki PGP anahtarları alınır.
+  # Fetch the PGP keys listed in the PKGBUILD to verify the source file signatures.
   for key in $(sed -n 's/^\s*validpgpkeys = //p' .SRCINFO); do
     runuser -u build -- gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys "${key}" ||
       runuser -u build -- gpg --keyserver hkps://keys.openpgp.org --recv-keys "${key}"
   done
 
-  # Paketin tarihi her build'de "şimdi" olmasın: makepkg dosya tarihlerini ve paketin build
-  # tarihini SOURCE_DATE_EPOCH'tan alıyor, chunkah da katmandaki tarihleri buna göre
-  # sabitliyor. Tarih her gün değişince içerik aynı olsa da katman değişiyor ve her
-  # güncellemede yeniden iniyordu (Helium ~180 MB/gün). AUR tarifinin son değişiklik
-  # tarihi kullanılır; tarif güncellenince değişir.
+  # Don't let the package date be "now" on every build: makepkg takes file dates and the
+  # package build date from SOURCE_DATE_EPOCH, and chunkah pins layer dates to it. When the
+  # date changed daily, the layer changed even with identical content and was downloaded
+  # again on every update (Helium ~180 MB/day). The AUR recipe's last commit date is used;
+  # it changes when the recipe is updated.
   epoch=$(runuser -u build -- git -C "/home/build/${pkg}" log -1 --format=%ct)
 
   makepkg_args=()
   case "${pkg}" in
     espanso)
-      # Tarif X11 ve Wayland sürümlerini ayrı ayrı derleyip testleri de derliyor (Rust, her
-      # biri birkaç dakika). Sadece Wayland sürümü derlenir: X11'in derleme satırları ve
-      # paket listesindeki adı silinir (makepkg'ın --pkg seçeneği artık yok), testler
-      # atlanır. Tarif değişip satırlar bulunamazsa build durur.
+      # The recipe builds the X11 and Wayland variants separately and also builds the tests
+      # (Rust, a few minutes each). Only the Wayland variant is built: the X11 build lines and
+      # its name in the package list are deleted (makepkg no longer has --pkg) and tests are
+      # skipped. If the recipe changes and the lines aren't found, the build stops.
       runuser -u build -- sed -i \
         -e '/export CARGO_TARGET_DIR=target-x11/,/--package espanso/d' \
         -e '/^pkgname=(/,/^)/{/espanso-x11/d}' PKGBUILD

@@ -1,10 +1,10 @@
-# bootc Arch depolarında yok. Kaynak koddan derlenmiş hali ayrı bir imajda duruyor
-# (scripts/bootc/Containerfile, .github/workflows/build-bootc.yml); burada sadece
-# dosyaları kopyalanır.
+# bootc is not in the Arch repos. A build from source lives in a separate image
+# (scripts/bootc/Containerfile, .github/workflows/build-bootc.yml); only its files are
+# copied here.
 ARG BOOTC_IMAGE=ghcr.io/ichbinbekir/nos-bootc:latest
 
-# Build betikleri (scripts/) ve ortak katman (core/) ayrı bir aşamada tutulur, son imaja
-# kopyalanmaz.
+# Build scripts (scripts/) and the shared layer (core/) are kept in a separate stage and are
+# not copied into the final image.
 FROM scratch AS ctx
 COPY scripts /scripts
 COPY core /core
@@ -13,8 +13,8 @@ FROM ${BOOTC_IMAGE} AS bootc
 
 FROM docker.io/archlinux/archlinux:latest AS base
 
-# AUR paketleri ayrı bir aşamada derlenir; makepkg root olarak çalışmadığı için
-# bu aşamada ayrı bir kullanıcı açılır. Son imaja sadece paket dosyaları geçer.
+# AUR packages are built in a separate stage; makepkg does not run as root, so a separate
+# user is created in this stage. Only the package files reach the final image.
 FROM base AS aur-builder
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     bash /ctx/scripts/aur.sh /ctx/core/aur.txt
@@ -23,18 +23,18 @@ FROM base AS system
 
 COPY --from=bootc / /
 
-# pacman'in /var altındaki her şeyi /usr/lib/sysimage'a taşınır: bootc'de /var imajın
-# parçası olmadığı için paket veritabanı /usr ile birlikte güncellenmeli (bootcrew/mono).
+# Everything pacman keeps under /var is moved to /usr/lib/sysimage: in bootc /var is not part
+# of the image, so the package database must be updated together with /usr (bootcrew/mono).
 RUN grep "= */var" /etc/pacman.conf | sed "/= *\/var/s/.*=// ; s/ //" | xargs -n1 sh -c 'mkdir -p "/usr/lib/sysimage/$(dirname $(echo $1 | sed "s@/var/@@"))" && mv -v "$1" "/usr/lib/sysimage/$(echo "$1" | sed "s@/var/@@")"' '' && \
     sed -i -e "/= *\/var/ s/^#//" -e "s@= */var@= /usr/lib/sysimage@g" -e "/DownloadUser/d" /etc/pacman.conf
 
-# Resmi Arch Docker imajı yer kazanmak için man sayfalarını, belgeleri ve çevirileri
-# kurmuyor (pacman.conf sonundaki NoExtract satırları). Normal bir Arch kurulumundaki gibi
-# olsun diye bu satırlar silinir ve önceden kurulu paketler, eksik dosyaları gelsin diye
-# yeniden kurulur. Sonra ortak katman (core/: paketler, AUR paketleri, system_files,
-# servisler, setup.sh; bkz. scripts/layer.sh).
-# /run ve /tmp tmpfs olarak bağlanır: paket kurulumu sırasında oluşan çalışma
-# zamanı dosyaları imaja girmez (bootc container lint).
+# The official Arch Docker image skips man pages, docs and translations to save space
+# (NoExtract lines at the end of pacman.conf). To match a normal Arch install, these lines are
+# deleted and the preinstalled packages are reinstalled so the missing files come in. Then the
+# shared layer (core/: packages, AUR packages, system_files, services, setup.sh; see
+# scripts/layer.sh).
+# /run and /tmp are mounted as tmpfs: runtime files created during package installation do
+# not end up in the image (bootc container lint).
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=aur-builder,source=/output,target=/aur \
     --mount=type=cache,dst=/usr/lib/sysimage/cache/pacman/pkg \
@@ -49,9 +49,9 @@ RUN --mount=type=tmpfs,dst=/tmp --mount=type=tmpfs,dst=/root \
     --mount=type=bind,from=ctx,source=/,target=/ctx \
     bash /ctx/scripts/bootc/initramfs.sh
 
-# Sürüm (build tarihi) os-release'e initramfs üretildikten SONRA eklenir. bootc açılış
-# menüsündeki adı buradan alıyor ("nos 20261017"); dracut ise os-release'i initrd'ye
-# kopyalıyor, tarih daha önce yazılırsa ~140 MB'lık initrd her gün değişir.
+# The version (build date) is added to os-release AFTER the initramfs is generated. bootc
+# takes the boot menu name from here ("nos 20261017"); dracut copies os-release into the
+# initrd, so if the date were written earlier the ~140 MB initrd would change every day.
 RUN echo "VERSION_ID=$(date -u +%Y%m%d)" >>/usr/lib/os-release
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \

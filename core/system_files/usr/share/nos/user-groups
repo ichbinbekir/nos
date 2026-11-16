@@ -1,8 +1,8 @@
-# Kurulumda oluşturulan kullanıcının eklendiği gruplar (satır başına bir grup).
-# Kurulum programı (nos-install) ve ilk açılış ekranı (nos-firstboot) okur; imajda
-# olmayan grup atlanır. Yeni grup eklenince mevcut kullanıcıya elle verilir:
-#   sudo usermod -aG <grup> <kullanıcı>   (sonra yeniden başlat)
+# Groups the user created during installation is added to (one group per line).
+# Read by the installer (nos-install) and the first-boot screen (nos-firstboot); groups
+# not present in the image are skipped. When a new group is added, give it to the existing user by hand:
+#   sudo usermod -aG <group> <user>   (then reboot)
 wheel     # sudo
-libvirt   # sanal makineleri şifresiz yönetmek (virt-manager)
-keyd      # pencereye göre tuş eşleme (keyd-application-mapper)
-gamemode  # GameMode'un işlemci önceliği ayarları
+libvirt   # manage virtual machines without a password (virt-manager)
+keyd      # per-window key remapping (keyd-application-mapper)
+gamemode  # GameMode's CPU priority settings

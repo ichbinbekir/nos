@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths-ignore:
-      # İmajın içeriğini değiştirmeyen dosyalar
+      # Files that don't change the image contents
       - '**.md'
       - 'docs/**'
       - 'dotfiles/**'
@@ -15,11 +15,11 @@ on:
       - 'cosign.pub'
       - '.gitignore'
       - '.gitattributes'
-      # Kurulum ISO'su; onu build-iso.yml elle build eder.
+      # Installer ISO; build-iso.yml builds it manually.
       - 'iso/**'
       - '.github/workflows/build-iso.yml'
-      # Sadece bootc imajını ilgilendiren dosyalar; onları build-bootc.yml build eder.
-      # İki workflow birbirinden bağımsız: yeni bootc bir sonraki build'de (04:00 ya da elle) alınır.
+      # Files that only concern the bootc image; build-bootc.yml builds them.
+      # The two workflows are independent: a new bootc is picked up on the next build (04:00 or manual).
       - 'scripts/bootc/build-bootc.sh'
       - 'scripts/bootc/Containerfile'
       - '.github/workflows/build-bootc.yml'
@@ -33,7 +33,7 @@ on:
       - 'dotfiles/**'
       - '.chezmoiroot'
       - 'iso/**'
-  # Arch rolling release: paketler her gün güncelleniyor, imaj da her gün yeniden build edilir.
+  # Arch is a rolling release: packages update daily, so the image is rebuilt daily too.
   schedule:
     - cron: '0 4 * * *'
   workflow_dispatch:
@@ -47,11 +47,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Önce ortak imaj (nos) build edilir; yayınlanmaz, sadece bu işin içinde kalır. Sonra her
-  # makine imajı (nos-<makine>, machines/ altındaki her klasör) onun üzerine sırayla kurulur,
-  # katmanlara bölünür, yüklenir ve imzalanır. Ortak imaj bir kez build edilir: makineler
-  # ayrı işlerde paralel build edilseydi her biri ortak imajı ya yeniden build edecek ya da
-  # bir yerden indirecekti.
+  # First the shared image (nos) is built; it isn't published and only lives inside this job.
+  # Then each machine image (nos-<machine>, every folder under machines/) is built on top of it
+  # in turn, rechunked, pushed and signed. The shared image is built once: if machines were
+  # built in parallel jobs, each would have to rebuild the shared image or download it from
+  # somewhere.
   build:
     runs-on: ubuntu-26.04
     timeout-minutes: 150
@@ -69,51 +69,50 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
-      # Registry büyük harf kabul etmediği için kullanıcı adı küçük harfe çevrilir
+      # The registry doesn't accept uppercase, so the user name is lowercased
       - name: Set registry
         run: |
           echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
           echo "BOOTC_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/nos-bootc:latest" >> "$GITHUB_ENV"
 
-      # machines/ altındaki her klasör bir makine imajı. Yeni makine için klasör eklemek yeter
-      # (bir de core/system_files/etc/containers/policy.json'a imaj adı).
+      # Every folder under machines/ is a machine image. Adding a folder is enough for a new
+      # machine (plus the image name in core/system_files/etc/containers/policy.json).
       - name: List machines
         id: machines
         run: |
           list=$(find machines -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | jq -Rsc 'split("\n") | map(select(. != ""))')
           echo "list=$list" >> "$GITHUB_OUTPUT"
           echo "MACHINES=$(jq -r 'join(" ")' <<<"$list")" >> "$GITHUB_ENV"
-          echo "Makineler: $list"
+          echo "Machines: $list"
 
-      # Build sırasında nos-bootc imajı çekildiği için giriş build'den önce yapılır.
+      # Log in before the build because the build pulls the nos-bootc image.
       - name: Log in to registry
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$REGISTRY_TOKEN" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          # cosign Docker'ın oturum bilgisini kullanıyor
+          # cosign uses Docker's credentials
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build base image
         run: just build
 
-      # İmza, SIGNING_SECRET tanımlıysa atılır. Anahtar şifreliyse şifresi
-      # COSIGN_PASSWORD secret'ında durur (bkz. README).
+      # Images are signed if SIGNING_SECRET is set. If the key is encrypted, its password is in
+      # the COSIGN_PASSWORD secret (see README).
       - name: Install cosign
         if: github.event_name != 'pull_request' && env.SIGNING_SECRET != ''
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: 'v3.1.2'
 
-      # Her makine için: build → katmanlara bölme → yükleme → imza. Bir makine hata verirse
-      # diğerleri yine yüklenir, iş sonunda başarısız sayılır. Pull request'te sadece build
-      # edilir (yükleme yok).
+      # For each machine: build → rechunk → push → sign. If one machine fails, the others are
+      # still pushed and the job is marked failed at the end. Pull requests only build (no push).
       #
-      # Etiketler: latest (sistemlerin takip ettiği) ve YYYYMMDD (eski bir güne dönmek için).
-      # podman, yeni parçaları ilk yüklediğinde katman bilgilerini eksik gönderiyor; ilk push
-      # ile sonrakilerin kimliği (digest) farklı çıkıyor (podman#27796, bootcrew de aynısını
-      # yapıyor). Bu yüzden önce latest iki kez yüklenir, sonra tarih etiketi; hepsi aynı
-      # kimliği taşır ve imza o kimliğe atılır.
+      # Tags: latest (what systems track) and YYYYMMDD (to go back to an earlier day).
+      # When podman first pushes new blobs it sends incomplete layer info, so the first push
+      # gets a different digest than later ones (podman#27796; bootcrew does the same). So
+      # latest is pushed twice, then the date tag; all carry the same digest and the signature
+      # is made for that digest.
       - name: Build, push and sign machine images
         env:
           COSIGN_EXPERIMENTAL: false
@@ -121,9 +120,9 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           PUBLISH: ${{ github.event_name != 'pull_request' }}
         run: |
-          # Dıştaki kabuk hatada durmaz (bir makine düşünce diğerleri devam etsin); her makine
-          # kendi alt kabuğunda hatada durur. (if koşulu içindeki alt kabukta set -e
-          # çalışmadığı için sonuç ayrıca alınıyor.)
+          # The outer shell doesn't stop on errors (if one machine fails, the others continue);
+          # each machine stops on error in its own subshell. (set -e doesn't work in a subshell
+          # inside an if condition, so the result is checked separately.)
           set +e
           set -uo pipefail
           failed=()
@@ -144,20 +143,20 @@ jobs:
                     --key env://COSIGN_PRIVATE_KEY "$IMAGE_REGISTRY/$image@$(< /tmp/digestfile)"
                 fi
               fi
-              # Sıradaki makineye yer açılsın.
+              # Free up space for the next machine.
               podman rmi -f "$image:latest"
             )
             rc=$?
             echo "::endgroup::"
             if ((rc != 0)); then
-              echo "::error::nos-$machine başarısız"
+              echo "::error::nos-$machine failed"
               failed+=("$machine")
             fi
           done
-          ((${#failed[@]} == 0)) || { echo "Başarısız: ${failed[*]}"; exit 1; }
+          ((${#failed[@]} == 0)) || { echo "Failed: ${failed[*]}"; exit 1; }
 
-  # Etiketsiz ve eski kayıtları silme, her makine imajı için ayrı (bir şey build etmez).
-  # Makinelerden biri başarısız olsa da diğerlerininki temizlenir.
+  # Deletes untagged and old versions, separately for each machine image (builds nothing).
+  # Even if one machine fails, the others are still cleaned up.
   cleanup:
     needs: build
     if: always() && github.event_name != 'pull_request' && needs.build.outputs.machines != ''
@@ -168,11 +167,11 @@ jobs:
       matrix:
         machine: ${{ fromJSON(needs.build.outputs.machines) }}
     steps:
-      # Etiketsiz kayıtları sil: latest'in ilk yüklemesi (podman#27796, yukarıda) ikinci
-      # yüklemeyle etiketini kaybedip sahipsiz kalıyor; her build bir tane bırakıyordu.
-      # İmzalar eski biçimde (.sig etiketi) olduğu ve imaj tek parça (index değil) olduğu
-      # için hiçbir etiketsiz kayıt gerekli değil. Eski imajları silmeden önce çalışır ki
-      # 30 kayıt sınırı sadece imaj ve imzaları saysın.
+      # Delete untagged versions: the first push of latest (podman#27796, above) loses its tag
+      # on the second push and is left orphaned; every build left one behind. Since signatures
+      # use the old format (.sig tag) and the image is a single manifest (not an index), no
+      # untagged version is needed. Runs before deleting old images so the 30-version limit
+      # only counts images and signatures.
       - name: Delete untagged images
         continue-on-error: true
         uses: actions/delete-package-versions@v5
@@ -182,9 +181,10 @@ jobs:
           delete-only-untagged-versions: 'true'
           min-versions-to-keep: 0
 
-      # Eski imajları sil: her build bir imaj ve bir imza (.sig) kaydı bırakıyor. Son 30
-      # kayıt (~15 gün) tutulur; o günlere `bootc switch ghcr.io/<sahip>/nos-<makine>:YYYYMMDD`
-      # ile dönülebilir. Silme başarısız olursa build başarısız sayılmaz.
+      # Delete old images: every build leaves an image and a signature (.sig) version. The last
+      # 30 versions (~15 days) are kept; you can go back to those days with
+      # `bootc switch ghcr.io/<owner>/nos-<machine>:YYYYMMDD`. If deletion fails, the build is
+      # not marked as failed.
       - name: Delete old images
         continue-on-error: true
         uses: actions/delete-package-versions@v5

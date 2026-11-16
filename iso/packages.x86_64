@@ -1,4 +1,4 @@
-# Canlı ortam
+# Live environment
 base
 linux
 linux-firmware
@@ -7,11 +7,11 @@ amd-ucode
 mkinitcpio
 mkinitcpio-archiso
 
-# Ağ (kablolu otomatik; Wi-Fi kurulum programından nmtui ile)
+# Network (wired is automatic; Wi-Fi via nmtui from the installer)
 networkmanager
 wireless-regdb
 
-# Kurulum
+# Installation
 podman
 skopeo
 gum
@@ -21,6 +21,6 @@ gptfdisk
 parted
 ntfs-3g
 
-# Arıza durumunda elle müdahale için
+# For manual intervention if something goes wrong
 nano
 less

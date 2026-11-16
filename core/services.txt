@@ -1,10 +1,10 @@
-# Açılışta etkin olacak servisler. Her satıra bir servis, # sonrası yorum.
-# Yeni bir uygulamanın servisi için burada karar verilmez: Arch paketi açmıyorsa kapalı kalır
-# (istisnalar aşağıda yorumlu, sahibi özellikle istedi).
+# Services enabled at boot. One service per line, anything after # is a comment.
+# A new app's service is not decided here: if the Arch package doesn't enable it, it stays off
+# (exceptions are commented below, specifically requested by the owner).
 
 sddm.service
 NetworkManager.service
-NetworkManager-wait-online.service # nos-update internet bağlantısını beklesin diye
+NetworkManager-wait-online.service # So nos-update waits for the network
 bluetooth.service
 ufw.service
 power-profiles-daemon.service
@@ -17,7 +17,7 @@ snapper-timeline.timer
 snapper-cleanup.timer
 libvirtd.socket
 keyd.service
-zapret.service # sahibinin isteği
-systemd-oomd.service # sahibinin isteği
-scx_loader.service # sahibinin isteği: bpfland açılışta açık
-warp-svc.service # sahibinin isteği
+zapret.service # owner's request
+systemd-oomd.service # owner's request
+scx_loader.service # owner's request: bpfland enabled at boot
+warp-svc.service # owner's request
