@@ -20,8 +20,7 @@ on:
       - 'scripts/bootc/build-bootc.sh'
       - 'scripts/bootc/Containerfile'
       - '.github/workflows/build-bootc.yml'
-  schedule:
-    - cron: '0 3 * * *'
+  # The project is deprecated (Nov 23, 2026): the daily scheduled check was turned off.
   workflow_dispatch:
 
 permissions:

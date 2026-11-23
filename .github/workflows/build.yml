@@ -33,9 +33,8 @@ on:
       - 'dotfiles/**'
       - '.chezmoiroot'
       - 'iso/**'
-  # Arch is a rolling release: packages update daily, so the image is rebuilt daily too.
-  schedule:
-    - cron: '0 4 * * *'
+  # The project is deprecated (Nov 23, 2026): the daily scheduled build was turned off.
+  # Run it by hand (workflow_dispatch) if an image is still needed.
   workflow_dispatch:
 
 permissions:
