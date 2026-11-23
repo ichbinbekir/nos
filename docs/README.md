@@ -1,5 +1,10 @@
 # nos
 
+> [!WARNING]
+> **Deprecated.** This project is no longer maintained. Using an image-based (bootc) system as a daily development machine turned out to be too much friction: every new tool meant either changing and rebuilding the image or setting up and maintaining a container (distrobox), and that layer kept causing problems of its own (GPU/CUDA access, editors attaching to containers, apps whose windows didn't work). I moved to a regular Arch Linux install that uses the same package selection and settings worked out here, so this repository stays as a reference. The images may stop being updated.
+>
+> **Kullanımdan kaldırıldı.** Bu proje artık geliştirilmiyor. İmaj tabanlı (bootc) bir sistemi her gün geliştirme yapılan bir bilgisayar olarak kullanmak fazla zahmetli oldu: her yeni araç için ya imajı değiştirip yeniden build etmek ya da bir kutu (distrobox) açıp onu yönetmek gerekiyordu, bu katman da kendi sorunlarını çıkarıyordu (ekran kartı/CUDA erişimi, editörün kutulara bağlanması, penceresi açılmayan uygulamalar). Burada belirlenen paketler ve ayarlarla normal bir Arch Linux kurulumuna geçtim; bu depo başvuru kaynağı olarak duruyor. İmajlar güncellenmeyi bırakabilir.
+
 A **personal** [bootc](https://github.com/bootc-dev/bootc) image based on Arch Linux, with the KDE Plasma desktop.
 
 The system is built on GitHub as a container image, and the computer is installed from that image. Updates replace the whole image; if an update causes trouble, you can go back to the previous version with a single command.

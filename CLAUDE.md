@@ -2,6 +2,8 @@
 
 Arch Linux tabanlı, KDE Plasma'lı kişisel bir bootc imajı. Kullanıcıya yönelik açıklama, kurulum ve kullanım: [docs/README.md](docs/README.md) (İngilizce; GitHub ana sayfada gösteriyor).
 
+**Proje bırakıldı (23 Kasım 2026, sahibinin kararı).** Sahibi bootc yapısını günlük geliştirmede fazla zahmetli buldu (her araç için imaj build'i ya da distrobox kutusu, kutularda GPU/VS Code/arayüz sorunları) ve aynı paket ve ayarlarla normal Arch kurulumuna geçiyor. `docs/README.md`'nin en üstünde İngilizce + Türkçe "Deprecated" notu var (sahibinin isteği; README'deki tek Türkçe kısım). Depo başvuru kaynağı; dotfiles (`dotfiles/`, chezmoi) kullanılmaya devam ediyor. Günlük build hâlâ açık (kapatma sahibinin kararı). Sahibi düz Arch için tek tıkla kuran bir kurulum aracı (btrfs, kullanıcı, Helium vb.) düşünüyor.
+
 ## Çalışma şekli (önemli)
 
 - **Proje sahibi yapıyı Claude'a bırakmıştır.** Justfile, workflow'lar, build aşamaları gibi teknik yapıyı bilmiyor ve bunlarla uğraşmak istemiyor. Ne istediğini söyler (ör. "şu uygulama olsun", "şunu kaldır"); Claude bunu aşağıdaki kurallar çerçevesinde uygun yere ekler, gerekirse yapıyı düzenler.
